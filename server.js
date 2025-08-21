@@ -17,34 +17,37 @@ app.get("/", (req, res) => {
   res.send("Server is running!");
 });
 
-// Webhook Tilda
+// Webhook Tilda — POST
 app.post("/tilda-webhook", async (req, res) => {
   try {
     console.log("Получен POST /tilda-webhook");
     console.log("Тело запроса:", req.body);
 
-    // Если тестовый запрос Tilda
+    // Тестовый запрос Tilda
     if (req.body.test) {
-      console.log("Тестовый запрос от Tilda");
       return res.status(200).json({ success: true });
     }
 
     const { email } = req.body;
-
     if (!email) {
-      console.log("Ошибка: email отсутствует");
       return res.status(400).json({ error: "Email обязателен" });
     }
 
-    // Добавляем или обновляем пользователя по email
-    // name указываем дефолтно, чтобы не было ошибки NOT NULL
+    // Получаем пользователя по email без фильтров
     const { data, error } = await supabase
       .from("users")
-      .upsert([{ email, name: email }], { onConflict: "email" });
+      .select("*")
+      .eq("email", email)
+      .single();
 
-    if (error) throw error;
+    if (error && error.code === "PGRST116") {
+      // Пользователь не найден
+      return res.json({ success: true, user: null });
+    } else if (error) {
+      throw error;
+    }
 
-    console.log("Webhook успешно обработан, данные пользователя:", data);
+    console.log("Пользователь найден:", data);
     res.json({ success: true, user: data });
   } catch (err) {
     console.error("Ошибка webhook:", err.message);
@@ -52,7 +55,7 @@ app.post("/tilda-webhook", async (req, res) => {
   }
 });
 
-// Получение пользователя по email
+// GET /get-user — получение пользователя по email
 app.get("/get-user", async (req, res) => {
   try {
     const email = req.query.email;
@@ -64,9 +67,13 @@ app.get("/get-user", async (req, res) => {
       .eq("email", email)
       .single();
 
-    if (error) throw error;
+    if (error && error.code === "PGRST116") {
+      return res.json({ success: true, user: null });
+    } else if (error) {
+      throw error;
+    }
 
-    res.json(data);
+    res.json({ success: true, user: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
