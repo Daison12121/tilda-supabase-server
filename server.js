@@ -20,14 +20,12 @@ app.get("/", (req, res) => {
 // Webhook Tilda
 app.post("/tilda-webhook", async (req, res) => {
   try {
-    const body = req.body || {};
-
-    // Если тестовый запрос Tilda
-    if (body.test) {
+    // Тестовый запрос от Tilda
+    if (req.body.test) {
       return res.status(200).json({ success: true });
     }
 
-    const { email, name = null } = body; // name опционально
+    const { email } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: "Email обязателен" });
@@ -36,7 +34,7 @@ app.post("/tilda-webhook", async (req, res) => {
     // Добавляем или обновляем пользователя по email
     const { data, error } = await supabase
       .from("users")
-      .upsert([{ email, name }], { onConflict: "email" });
+      .upsert([{ email }], { onConflict: "email" });
 
     if (error) throw error;
 
