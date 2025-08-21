@@ -20,24 +20,31 @@ app.get("/", (req, res) => {
 // Webhook Tilda
 app.post("/tilda-webhook", async (req, res) => {
   try {
-    // Тестовый запрос от Tilda
+    console.log("Получен POST /tilda-webhook");
+    console.log("Тело запроса:", req.body);
+
+    // Если тестовый запрос Tilda
     if (req.body.test) {
+      console.log("Тестовый запрос от Tilda");
       return res.status(200).json({ success: true });
     }
 
     const { email } = req.body;
 
     if (!email) {
+      console.log("Ошибка: email отсутствует");
       return res.status(400).json({ error: "Email обязателен" });
     }
 
     // Добавляем или обновляем пользователя по email
+    // name указываем дефолтно, чтобы не было ошибки NOT NULL
     const { data, error } = await supabase
       .from("users")
-      .upsert([{ email }], { onConflict: "email" });
+      .upsert([{ email, name: email }], { onConflict: "email" });
 
     if (error) throw error;
 
+    console.log("Webhook успешно обработан, данные пользователя:", data);
     res.json({ success: true, user: data });
   } catch (err) {
     console.error("Ошибка webhook:", err.message);
