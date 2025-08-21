@@ -1,10 +1,19 @@
 import express from "express";
+import cors from "cors"; // <-- подключаем cors
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const app = express();
+
+// Разрешаем CORS для домена Tilda
+app.use(cors({
+  origin: "https://aida.kg", // указываем домен вашего сайта
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
 app.use(express.json());
 
 const supabase = createClient(
@@ -33,7 +42,7 @@ app.post("/tilda-webhook", async (req, res) => {
       return res.status(400).json({ error: "Email обязателен" });
     }
 
-    // Получаем пользователя по email без фильтров
+    // Получаем пользователя по email
     const { data, error } = await supabase
       .from("users")
       .select("*")
