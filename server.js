@@ -7,14 +7,29 @@ dotenv.config();
 
 const app = express();
 
-// Разрешаем CORS для домена Tilda
+// Разрешаем CORS для домена Tilda и всех поддоменов
 app.use(cors({
-  origin: "https://aida.kg", // указываем домен вашего сайта
-  methods: ["GET", "POST"],
-  credentials: true
+  origin: [
+    "https://aida.kg",
+    /^https:\/\/.*\.tilda\.ws$/,
+    /^https:\/\/.*\.tilda\.cc$/,
+    /^https:\/\/tilda\.cc$/,
+    /^https:\/\/.*\.tildacdn\.com$/
+  ],
+  methods: ["GET", "POST", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
 app.use(express.json());
+
+// Логирование всех запросов для отладки
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  console.log('Origin:', req.get('Origin'));
+  next();
+});
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
