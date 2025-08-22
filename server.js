@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors"; // <-- подключаем cors
+import cors from "cors";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
@@ -7,17 +7,11 @@ dotenv.config();
 
 const app = express();
 
-// Разрешаем CORS для домена Tilda и всех поддоменов
+// Упрощенные CORS настройки для тестирования
 app.use(cors({
-  origin: [
-    "https://aida.kg",
-    /^https:\/\/.*\.tilda\.ws$/,
-    /^https:\/\/.*\.tilda\.cc$/,
-    /^https:\/\/tilda\.cc$/,
-    /^https:\/\/.*\.tildacdn\.com$/
-  ],
+  origin: '*', // Разрешаем все домены
   methods: ["GET", "POST", "OPTIONS"],
-  credentials: true,
+  credentials: false,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
