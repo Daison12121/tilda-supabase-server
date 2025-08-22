@@ -120,22 +120,31 @@ tilda-supabase-server/
 const USER_ELEMENTS = {
     // Формат: 'CSS селектор': 'поле_из_базы_данных'
     
-    '#rec1235790536 .t-name': 'name',           // Имя пользователя
-    '#rec1235790536 .t-email': 'email',         // Email пользователя  
-    '#rec1235790536 .t-phone': 'phone',         // Телефон пользователя
-    '#rec1235790536 .t-company': 'company',     // Компания
-    '#rec1235790536 .t-position': 'position',   // Должность
+    // Основная информация:
+    '#rec1235790536 .t-name': 'name',                    // Имя пользователя
+    '#rec1235790536 .t-email': 'email',                  // Email пользователя  
+    '#rec1235790536 .t-referral-code': 'referral_code',  // Реферальный код
+    '#rec1235790536 .t-balance': 'balance_kgs',          // Баланс в сомах
+    '#rec1235790536 .t-earned': 'total_earned',          // Всего заработано
     
-    // Можете использовать ЛЮБЫЕ поля из вашей таблицы:
-    // '.user-id': 'id',                        // ID пользователя
-    // '.created-date': 'created_at',           // Дата создания
-    // '.user-status': 'status',                // Статус (если есть)
-    // '.user-city': 'city',                    // Город (если есть)
+    // ДОСТУПНЫЕ ПОЛЯ ИЗ ВАШЕЙ БАЗЫ ДАННЫХ:
+    // '.user-id': 'id',                        // UUID пользователя
+    // '.user-name': 'name',                    // Имя пользователя
+    // '.user-email': 'email',                  // Email пользователя
+    // '.created-date': 'created_at',           // Дата регистрации
+    // '.auth-uid': 'auth_uid',                 // UID авторизации
+    // '.referral-code': 'referral_code',       // Реферальный код
+    // '.referred-by': 'referred_by',           // Кем приглашен
+    // '.balance': 'balance_kgs',               // Баланс в сомах
+    // '.total-earned': 'total_earned',         // Всего заработано
+    // '.level-1-refs': 'level_1_referrals',    // Рефералы 1 уровня
+    // '.level-2-refs': 'level_2_referrals',    // Рефералы 2 уровня
+    // '.level-3-refs': 'level_3_referrals',    // Рефералы 3 уровня
     
     // Разные типы селекторов:
-    // '.user-name': 'name',                    // По классу
-    // '#user-email': 'email',                  // По ID
-    // '[data-user="name"]': 'name',            // По атрибуту
+    // '.profile .user-name': 'name',           // Вложенные элементы
+    // '#user-balance': 'balance_kgs',          // По ID
+    // '[data-field="referral"]': 'referral_code', // По атрибуту
 };
 ```
 
@@ -164,16 +173,34 @@ const USER_ELEMENTS = {
 
 ```sql
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255),
-    phone VARCHAR(50),
-    company VARCHAR(255),
-    position VARCHAR(255),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    auth_uid VARCHAR(255),
+    referral_code VARCHAR(50) UNIQUE,
+    referred_by VARCHAR(50),
+    balance_kgs DECIMAL(10,2) DEFAULT 0.00,
+    total_earned DECIMAL(10,2) DEFAULT 0.00,
+    level_1_referrals INTEGER DEFAULT 0,
+    level_2_referrals INTEGER DEFAULT 0,
+    level_3_referrals INTEGER DEFAULT 0
 );
 ```
+
+### 📊 Доступные поля:
+- **id** - UUID пользователя
+- **email** - Email пользователя  
+- **name** - Имя пользователя
+- **created_at** - Дата регистрации
+- **auth_uid** - UID авторизации
+- **referral_code** - Уникальный реферальный код
+- **referred_by** - Реферальный код пригласившего
+- **balance_kgs** - Текущий баланс в сомах
+- **total_earned** - Общая сумма заработка
+- **level_1_referrals** - Количество рефералов 1 уровня
+- **level_2_referrals** - Количество рефералов 2 уровня  
+- **level_3_referrals** - Количество рефералов 3 уровня
 
 ## 🔒 Безопасность
 

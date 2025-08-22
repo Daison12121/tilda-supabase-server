@@ -75,20 +75,29 @@ const USER_ELEMENTS = {
 };
 ```
 
-## 📊 Стандартные поля базы данных
+## 📊 Реальные поля вашей базы данных
 
-Обычно в таблице `users` есть следующие поля:
+В вашей таблице `users` доступны следующие поля:
 
 ```javascript
 const USER_ELEMENTS = {
-    '.user-id': 'id',                    // ID пользователя
+    // Основная информация:
+    '.user-id': 'id',                    // UUID пользователя
     '.user-name': 'name',                // Имя пользователя
-    '.user-email': 'email',              // Email
-    '.user-phone': 'phone',              // Телефон
-    '.user-company': 'company',          // Компания
-    '.user-position': 'position',        // Должность
-    '.created-date': 'created_at',       // Дата создания
-    '.updated-date': 'updated_at',       // Дата обновления
+    '.user-email': 'email',              // Email пользователя
+    '.created-date': 'created_at',       // Дата регистрации
+    '.auth-uid': 'auth_uid',             // UID авторизации
+    
+    // Реферальная система:
+    '.referral-code': 'referral_code',   // Реферальный код пользователя
+    '.referred-by': 'referred_by',       // Кем приглашен (реферальный код)
+    '.level-1-refs': 'level_1_referrals', // Количество рефералов 1 уровня
+    '.level-2-refs': 'level_2_referrals', // Количество рефералов 2 уровня  
+    '.level-3-refs': 'level_3_referrals', // Количество рефералов 3 уровня
+    
+    // Финансовая информация:
+    '.balance': 'balance_kgs',           // Текущий баланс в сомах
+    '.total-earned': 'total_earned',     // Всего заработано
 };
 ```
 
@@ -103,14 +112,35 @@ const USER_ELEMENTS = {
 
 ## 🎨 Примеры для разных дизайнов
 
-### Карточка профиля
+### Карточка профиля пользователя
 ```javascript
 const USER_ELEMENTS = {
-    '.profile-card .avatar-name': 'name',
+    '.profile-card .user-name': 'name',
     '.profile-card .user-email': 'email',
-    '.profile-card .user-phone': 'phone',
-    '.profile-card .company': 'company',
-    '.profile-card .position': 'position',
+    '.profile-card .referral-code': 'referral_code',
+    '.profile-card .join-date': 'created_at',
+    '.profile-card .balance': 'balance_kgs',
+};
+```
+
+### Реферальная панель
+```javascript
+const USER_ELEMENTS = {
+    '.referral-panel .my-code': 'referral_code',
+    '.referral-panel .level-1': 'level_1_referrals',
+    '.referral-panel .level-2': 'level_2_referrals', 
+    '.referral-panel .level-3': 'level_3_referrals',
+    '.referral-panel .invited-by': 'referred_by',
+};
+```
+
+### Финансовая статистика
+```javascript
+const USER_ELEMENTS = {
+    '.finance .current-balance': 'balance_kgs',
+    '.finance .total-earned': 'total_earned',
+    '.finance .refs-count': 'level_1_referrals',
+    '.finance .user-name': 'name',
 };
 ```
 
