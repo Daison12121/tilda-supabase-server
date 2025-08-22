@@ -1,8 +1,8 @@
-# 🔧 Примеры настройки USER_ELEMENTS
+# 🔧 Примеры настройки USER_ELEMENTS для Zero Block
 
-## 📋 Как настроить отображение данных
+## 📋 Как настроить отображение данных в Zero Block
 
-В файле `user-display.html` найдите объект `USER_ELEMENTS` и настройте его под ваши нужды:
+В файле `user-display.html` найдите объект `USER_ELEMENTS` и настройте его под ваш Zero Block:
 
 ```javascript
 const USER_ELEMENTS = {
@@ -10,6 +10,12 @@ const USER_ELEMENTS = {
     // Добавьте свои настройки...
 };
 ```
+
+## 🎨 Важно: Стили НЕ изменяются!
+
+✅ **Система только заменяет текст в элементах**  
+✅ **Все стили Zero Block остаются без изменений**  
+✅ **Шрифты, цвета, размеры - всё остается как вы настроили в Tilda**
 
 ## 🎯 Примеры для разных случаев
 
@@ -112,35 +118,35 @@ const USER_ELEMENTS = {
 
 ## 🎨 Примеры для разных дизайнов
 
-### Карточка профиля пользователя
+### Zero Block с профилем пользователя
 ```javascript
 const USER_ELEMENTS = {
-    '.profile-card .user-name': 'name',
-    '.profile-card .user-email': 'email',
-    '.profile-card .referral-code': 'referral_code',
-    '.profile-card .join-date': 'created_at',
-    '.profile-card .balance': 'balance_kgs',
+    '#rec1234567890 .t-name': 'name',
+    '#rec1234567890 .t-email': 'email',
+    '#rec1234567890 .t-referral-code': 'referral_code',
+    '#rec1234567890 .t-join-date': 'created_at',
+    '#rec1234567890 .t-balance': 'balance_kgs',
 };
 ```
 
-### Реферальная панель
+### Zero Block с реферальной панелью
 ```javascript
 const USER_ELEMENTS = {
-    '.referral-panel .my-code': 'referral_code',
-    '.referral-panel .level-1': 'level_1_referrals',
-    '.referral-panel .level-2': 'level_2_referrals', 
-    '.referral-panel .level-3': 'level_3_referrals',
-    '.referral-panel .invited-by': 'referred_by',
+    '#rec1234567890 .t-my-code': 'referral_code',
+    '#rec1234567890 .t-level-1': 'level_1_referrals',
+    '#rec1234567890 .t-level-2': 'level_2_referrals', 
+    '#rec1234567890 .t-level-3': 'level_3_referrals',
+    '#rec1234567890 .t-invited-by': 'referred_by',
 };
 ```
 
-### Финансовая статистика
+### Zero Block с финансовой статистикой
 ```javascript
 const USER_ELEMENTS = {
-    '.finance .current-balance': 'balance_kgs',
-    '.finance .total-earned': 'total_earned',
-    '.finance .refs-count': 'level_1_referrals',
-    '.finance .user-name': 'name',
+    '#rec1234567890 .t-current-balance': 'balance_kgs',
+    '#rec1234567890 .t-total-earned': 'total_earned',
+    '#rec1234567890 .t-refs-count': 'level_1_referrals',
+    '#rec1234567890 .t-user-name': 'name',
 };
 ```
 

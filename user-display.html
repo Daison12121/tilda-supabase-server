@@ -133,8 +133,8 @@
                     element.dataset.originalText = element.textContent;
                 }
                 
-                // Добавляем класс для стилизации
-                element.classList.add('user-data-loaded');
+                // НЕ добавляем никаких классов, чтобы не менять стили Zero Block
+                // element.classList.add('user-data-loaded'); // УБРАНО!
                 
                 // Устанавливаем значение
                 const value = user[fieldName];
@@ -171,7 +171,8 @@
             elements.forEach(element => {
                 if (element.dataset.originalText) {
                     element.textContent = element.dataset.originalText;
-                    element.classList.remove('user-data-loaded');
+                    // НЕ удаляем классы, так как мы их не добавляем
+                    // element.classList.remove('user-data-loaded');
                 }
             });
         });
@@ -436,11 +437,7 @@
     100% { background-position: -200% 0; }
 }
 
-.user-data-loaded {
-    transition: all 0.3s ease;
-    color: #2196F3;
-    font-weight: bold;
-}
+/* Убрали стили .user-data-loaded чтобы не менять оформление Zero Block */
 
 /* Стили для отладочной панели */
 #user-display-debug {
