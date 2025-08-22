@@ -128,19 +128,54 @@
             }
             
             elements.forEach(element => {
-                // Сохраняем оригинальный текст если его еще нет
+                // Сохраняем оригинальный текст и HTML если их еще нет
                 if (!element.dataset.originalText) {
                     element.dataset.originalText = element.textContent;
+                    element.dataset.originalHTML = element.innerHTML;
                 }
                 
                 // НЕ добавляем никаких классов, чтобы не менять стили Zero Block
                 // element.classList.add('user-data-loaded'); // УБРАНО!
                 
-                // Устанавливаем значение
+                // Устанавливаем значение максимально аккуратно
                 const value = user[fieldName];
-                element.textContent = value;
-                updatedCount++;
                 
+                // Если элемент содержит только текст, используем textContent
+                // Если содержит HTML теги, заменяем только текстовые узлы
+                if (element.children.length === 0) {
+                    // Простой текстовый элемент
+                    element.textContent = value;
+                } else {
+                    // Элемент с вложенными тегами - заменяем только текстовые узлы
+                    const textNodes = [];
+                    const walker = document.createTreeWalker(
+                        element,
+                        NodeFilter.SHOW_TEXT,
+                        null,
+                        false
+                    );
+                    
+                    let node;
+                    while (node = walker.nextNode()) {
+                        if (node.nodeValue.trim()) {
+                            textNodes.push(node);
+                        }
+                    }
+                    
+                    if (textNodes.length > 0) {
+                        // Заменяем первый текстовый узел
+                        textNodes[0].nodeValue = value;
+                        // Очищаем остальные
+                        for (let i = 1; i < textNodes.length; i++) {
+                            textNodes[i].nodeValue = '';
+                        }
+                    } else {
+                        // Если нет текстовых узлов, добавляем текст в начало
+                        element.insertBefore(document.createTextNode(value), element.firstChild);
+                    }
+                }
+                
+                updatedCount++;
                 console.log(`✅ Обновлен элемент ${selector}: "${value}" (поле: ${fieldName})`);
             });
         });
@@ -169,11 +204,15 @@
         Object.keys(USER_ELEMENTS).forEach(selector => {
             const elements = document.querySelectorAll(selector);
             elements.forEach(element => {
-                if (element.dataset.originalText) {
+                if (element.dataset.originalHTML) {
+                    // Восстанавливаем полный HTML чтобы сохранить все стили
+                    element.innerHTML = element.dataset.originalHTML;
+                } else if (element.dataset.originalText) {
+                    // Если HTML не сохранен, восстанавливаем текст
                     element.textContent = element.dataset.originalText;
-                    // НЕ удаляем классы, так как мы их не добавляем
-                    // element.classList.remove('user-data-loaded');
                 }
+                // НЕ удаляем классы, так как мы их не добавляем
+                // element.classList.remove('user-data-loaded');
             });
         });
     }
@@ -233,16 +272,16 @@
     async function initUserDisplay() {
         console.log('🚀 Инициализация отображения данных пользователя...');
         
-        // Показываем индикатор загрузки
-        const loadingElements = document.querySelectorAll(Object.keys(USER_ELEMENTS).join(', '));
-        loadingElements.forEach(el => el.classList.add('user-data-loading'));
+        // НЕ показываем индикатор загрузки, чтобы не менять стили
+        // const loadingElements = document.querySelectorAll(Object.keys(USER_ELEMENTS).join(', '));
+        // loadingElements.forEach(el => el.classList.add('user-data-loading'));
         
         try {
             // Получаем данные текущего пользователя
             const userData = await getCurrentUser();
             
-            // Убираем индикатор загрузки
-            loadingElements.forEach(el => el.classList.remove('user-data-loading'));
+            // НЕ убираем индикатор загрузки, так как мы его не добавляли
+            // loadingElements.forEach(el => el.classList.remove('user-data-loading'));
             
             if (userData && userData.success && userData.user) {
                 // Обновляем элементы на странице
@@ -258,7 +297,8 @@
             }
         } catch (error) {
             console.error('❌ Ошибка инициализации:', error);
-            loadingElements.forEach(el => el.classList.remove('user-data-loading'));
+            // НЕ убираем классы, так как мы их не добавляли
+            // loadingElements.forEach(el => el.classList.remove('user-data-loading'));
             restoreOriginalText();
             showErrorIndicator('Ошибка соединения с сервером');
         }
@@ -423,19 +463,7 @@
 </script>
 
 <style>
-/* Стили для элементов с данными пользователя */
-.user-data-loading {
-    opacity: 0.6;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: userDataLoading 1.5s infinite;
-    border-radius: 3px;
-}
-
-@keyframes userDataLoading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
+/* Убрали все стили для элементов, чтобы не влиять на Zero Block */
 
 /* Убрали стили .user-data-loaded чтобы не менять оформление Zero Block */
 
