@@ -32,7 +32,7 @@ const supabase = createClient(
 
 // Проверка сервера
 app.get("/", (req, res) => {
-  res.send("Server is running!");
+  res.send("Server is running! Version 2.0 with auth system");
 });
 
 // Webhook Tilda — POST

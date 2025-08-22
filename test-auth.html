@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест системы авторизации</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 15px; margin: 5px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест системы авторизации</h1>
+    
+    <div class="test-section">
+        <h3>1. Тест синхронизации авторизации</h3>
+        <input type="email" id="testEmail" placeholder="Введите email" value="test@aida.kg">
+        <button onclick="testAuthSync()">Отправить авторизацию</button>
+        <div id="authResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Тест получения текущего пользователя</h3>
+        <button onclick="testCurrentUser()">Получить текущего пользователя</button>
+        <div id="currentUserResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Тест получения пользователя по email</h3>
+        <input type="email" id="getUserEmail" placeholder="Введите email" value="test@aida.kg">
+        <button onclick="testGetUser()">Получить пользователя</button>
+        <div id="getUserResult" class="result"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+        
+        async function testAuthSync() {
+            const email = document.getElementById('testEmail').value;
+            const resultDiv = document.getElementById('authResult');
+            
+            if (!email) {
+                resultDiv.innerHTML = '<span class="error">Введите email</span>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Отправляем запрос...';
+                
+                const response = await fetch(`${SERVER_URL}/auth-sync`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        action: 'test_login',
+                        timestamp: new Date().toISOString(),
+                        source: 'test_page',
+                        page: window.location.href
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<span class="success">✅ Успешно! Email: ${data.email}, Пользователь найден: ${data.userFound}</span>`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Ошибка: ${data.error}</span>`;
+                }
+                
+                console.log('Auth sync result:', data);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка запроса: ${error.message}</span>`;
+                console.error('Auth sync error:', error);
+            }
+        }
+        
+        async function testCurrentUser() {
+            const resultDiv = document.getElementById('currentUserResult');
+            
+            try {
+                resultDiv.innerHTML = 'Получаем текущего пользователя...';
+                
+                const response = await fetch(`${SERVER_URL}/current-user`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    resultDiv.innerHTML = `<span class="success">✅ Пользователь найден: ${data.user.name} (${data.user.email})</span>`;
+                } else if (data.success && !data.user) {
+                    resultDiv.innerHTML = `<span class="error">⚠️ Нет активных сессий: ${data.message}</span>`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Ошибка: ${data.error}</span>`;
+                }
+                
+                console.log('Current user result:', data);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка запроса: ${error.message}</span>`;
+                console.error('Current user error:', error);
+            }
+        }
+        
+        async function testGetUser() {
+            const email = document.getElementById('getUserEmail').value;
+            const resultDiv = document.getElementById('getUserResult');
+            
+            if (!email) {
+                resultDiv.innerHTML = '<span class="error">Введите email</span>';
+                return;
+            }
+            
+            try {
+                resultDiv.innerHTML = 'Получаем пользователя...';
+                
+                const response = await fetch(`${SERVER_URL}/get-user?email=${encodeURIComponent(email)}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.user) {
+                    resultDiv.innerHTML = `<span class="success">✅ Пользователь найден: ${data.user.name} (${data.user.email})</span>`;
+                } else if (data.success && !data.user) {
+                    resultDiv.innerHTML = `<span class="error">⚠️ Пользователь не найден в базе</span>`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Ошибка: ${data.error}</span>`;
+                }
+                
+                console.log('Get user result:', data);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Ошибка запроса: ${error.message}</span>`;
+                console.error('Get user error:', error);
+            }
+        }
+        
+        // Автоматический тест при загрузке
+        window.onload = function() {
+            console.log('🧪 Страница тестирования загружена');
+            console.log('Сервер:', SERVER_URL);
+        };
+    </script>
+</body>
+</html>
