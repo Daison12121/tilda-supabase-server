@@ -1,0 +1,303 @@
+<!-- 
+СКРИПТ ДЛЯ СТРАНИЦЫ АВТОРИЗАЦИИ TILDA
+Вставьте этот код в блок T123 на странице с формой входа/регистрации
+-->
+
+<script>
+(function() {
+    'use strict';
+    
+    const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+    
+    console.log('🔐 Инициализация перехватчика авторизации Tilda...');
+    
+    // Функция для отправки данных авторизации на сервер
+    async function sendAuthData(email, action = 'login') {
+        try {
+            console.log(`📤 Отправляем данные авторизации: ${email} (${action})`);
+            
+            const response = await fetch(`${SERVER_URL}/auth-sync`, {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
+                    action: action,
+                    timestamp: new Date().toISOString(),
+                    source: 'tilda',
+                    page: window.location.href
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Данные авторизации отправлены:', data);
+            
+            // Сохраняем в localStorage для других страниц
+            localStorage.setItem('tilda_auth_user', email);
+            localStorage.setItem('tilda_auth_timestamp', new Date().toISOString());
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Ошибка отправки данных авторизации:', error);
+            return null;
+        }
+    }
+    
+    // Функция для перехвата отправки форм
+    function interceptForms() {
+        console.log('🎯 Настраиваем перехват форм...');
+        
+        // Находим все формы на странице
+        const forms = document.querySelectorAll('form');
+        
+        forms.forEach((form, index) => {
+            console.log(`📋 Найдена форма ${index + 1}:`, form);
+            
+            // Добавляем обработчик на отправку формы
+            form.addEventListener('submit', function(event) {
+                console.log('📤 Перехвачена отправка формы:', form);
+                
+                // Ищем поле email в форме
+                const emailField = form.querySelector('input[type="email"], input[name*="email"], input[id*="email"]');
+                
+                if (emailField && emailField.value) {
+                    const email = emailField.value.trim();
+                    console.log('📧 Найден email в форме:', email);
+                    
+                    // Отправляем данные на сервер (не блокируем отправку формы)
+                    sendAuthData(email, 'login');
+                } else {
+                    console.log('⚠️ Email не найден в форме');
+                }
+            });
+        });
+        
+        // Также отслеживаем динамически добавленные формы
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        const newForms = node.querySelectorAll ? node.querySelectorAll('form') : [];
+                        newForms.forEach(form => {
+                            console.log('📋 Найдена новая форма:', form);
+                            
+                            form.addEventListener('submit', function(event) {
+                                const emailField = form.querySelector('input[type="email"], input[name*="email"], input[id*="email"]');
+                                if (emailField && emailField.value) {
+                                    sendAuthData(emailField.value.trim(), 'login');
+                                }
+                            });
+                        });
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    // Функция для перехвата событий Tilda
+    function interceptTildaEvents() {
+        console.log('🎉 Настраиваем перехват событий Tilda...');
+        
+        // События системы членства Tilda
+        const authEvents = [
+            'tilda:member:login',
+            'tilda:member:register',
+            'tilda:auth:success'
+        ];
+        
+        authEvents.forEach(eventName => {
+            window.addEventListener(eventName, function(event) {
+                console.log(`🎉 Событие Tilda: ${eventName}`, event);
+                
+                let email = null;
+                
+                // Пытаемся извлечь email из события
+                if (event.detail && event.detail.email) {
+                    email = event.detail.email;
+                } else if (event.detail && event.detail.user && event.detail.user.email) {
+                    email = event.detail.user.email;
+                }
+                
+                if (email) {
+                    console.log('📧 Email из события Tilda:', email);
+                    sendAuthData(email, eventName.includes('register') ? 'register' : 'login');
+                }
+            });
+        });
+        
+        // Событие выхода
+        window.addEventListener('tilda:member:logout', function(event) {
+            console.log('👋 Событие выхода Tilda:', event);
+            localStorage.removeItem('tilda_auth_user');
+            localStorage.removeItem('tilda_auth_timestamp');
+        });
+    }
+    
+    // Функция для перехвата AJAX запросов (если Tilda использует AJAX)
+    function interceptAjax() {
+        console.log('🌐 Настраиваем перехват AJAX запросов...');
+        
+        // Сохраняем оригинальный fetch
+        const originalFetch = window.fetch;
+        
+        window.fetch = function(...args) {
+            const [url, options] = args;
+            
+            // Проверяем, если это запрос авторизации Tilda
+            if (url && (url.includes('tilda') || url.includes('member') || url.includes('auth'))) {
+                console.log('🌐 Перехвачен AJAX запрос:', url, options);
+                
+                // Выполняем оригинальный запрос
+                return originalFetch.apply(this, args).then(response => {
+                    // Клонируем ответ для чтения
+                    const responseClone = response.clone();
+                    
+                    // Пытаемся прочитать ответ
+                    responseClone.json().then(data => {
+                        console.log('📥 Ответ AJAX запроса:', data);
+                        
+                        // Ищем email в ответе
+                        if (data && data.email) {
+                            sendAuthData(data.email, 'ajax_login');
+                        } else if (data && data.user && data.user.email) {
+                            sendAuthData(data.user.email, 'ajax_login');
+                        }
+                    }).catch(e => {
+                        // Игнорируем ошибки парсинга JSON
+                    });
+                    
+                    return response;
+                });
+            }
+            
+            return originalFetch.apply(this, args);
+        };
+    }
+    
+    // Функция для создания отладочной панели
+    function createDebugPanel() {
+        const panel = document.createElement('div');
+        panel.id = 'auth-debug-panel';
+        panel.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            z-index: 10000;
+            display: none;
+        `;
+        
+        panel.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <strong>🔐 Auth Interceptor</strong>
+                <button onclick="document.getElementById('auth-debug-panel').style.display='none'" 
+                        style="background: #f44336; color: white; border: none; border-radius: 3px; padding: 3px 8px; cursor: pointer;">✕</button>
+            </div>
+            <div id="auth-log" style="max-height: 200px; overflow-y: auto; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
+                Ожидание событий авторизации...
+            </div>
+            <button onclick="testAuthSync()" 
+                    style="width: 100%; padding: 8px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                🧪 Тест синхронизации
+            </button>
+        `;
+        
+        document.body.appendChild(panel);
+        
+        // Показать панель при нажатии Ctrl+Shift+A
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+    }
+    
+    // Функция для добавления лога в панель
+    function addToLog(message) {
+        const logDiv = document.getElementById('auth-log');
+        if (logDiv) {
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div style="margin: 2px 0; color: #4CAF50;">[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+    }
+    
+    // Глобальная функция для тестирования
+    window.testAuthSync = function() {
+        const email = prompt('Введите email для тестирования синхронизации:');
+        if (email) {
+            sendAuthData(email, 'test').then(result => {
+                if (result) {
+                    addToLog(`✅ Тест успешен: ${email}`);
+                } else {
+                    addToLog(`❌ Тест неудачен: ${email}`);
+                }
+            });
+        }
+    };
+    
+    // Переопределяем console.log для отображения в панели
+    const originalConsoleLog = console.log;
+    console.log = function(...args) {
+        originalConsoleLog.apply(console, args);
+        
+        const message = args.join(' ');
+        if (message.includes('📧') || message.includes('✅') || message.includes('❌')) {
+            addToLog(message);
+        }
+    };
+    
+    // Инициализация
+    function init() {
+        console.log('🚀 Запуск перехватчика авторизации...');
+        
+        createDebugPanel();
+        interceptForms();
+        interceptTildaEvents();
+        interceptAjax();
+        
+        console.log('✅ Перехватчик авторизации инициализирован');
+        console.log('💡 Для отладки нажмите Ctrl+Shift+A');
+        
+        addToLog('🚀 Перехватчик запущен');
+        addToLog('💡 Нажмите Ctrl+Shift+A для показа панели');
+    }
+    
+    // Запускаем при загрузке
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+})();
+</script>
+
+<style>
+/* Стили для отладочной панели */
+#auth-debug-panel {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+}
+
+#auth-debug-panel button:hover {
+    opacity: 0.8;
+}
+</style>
