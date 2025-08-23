@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Простой тест для Tilda Zero Block</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .zero-block { 
+            border: 2px solid #2196F3; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .user-info { 
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .auto-copy-referral {
+            background: #FF9800;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            margin: 10px 0;
+            border: none;
+            font-size: 14px;
+        }
+        .auto-copy-referral:hover {
+            background: #F57C00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Простой тест для Tilda Zero Block</h1>
+    <p>Этот код можно скопировать в Zero Block на Tilda</p>
+    
+    <!-- Имитируем Zero Block с ID rec1235790536 -->
+    <div class="zero-block" id="rec1235790536">
+        <h3>👤 Информация о пользователе</h3>
+        
+        <div class="user-info">
+            <strong>Имя:</strong> <span class="user-name">Загрузка...</span>
+        </div>
+        
+        <div class="user-info">
+            <strong>Email:</strong> <span class="user-email">Загрузка...</span>
+        </div>
+        
+        <div class="user-info">
+            <strong>Баланс:</strong> <span class="user-balance">Загрузка...</span> сом
+        </div>
+        
+        <div class="user-info">
+            <strong>Количество рефералов:</strong> <span class="referral-count">Загрузка...</span>
+        </div>
+        
+        <div class="user-info">
+            <strong>Первый реферал:</strong> <span class="referral-first-name">Загрузка...</span>
+        </div>
+        
+        <div class="user-info">
+            <strong>Все рефералы:</strong> <span class="referral-all-names">Загрузка...</span>
+        </div>
+        
+        <div class="user-info">
+            <strong>Подробно:</strong> <span class="referral-detailed">Загрузка...</span>
+        </div>
+        
+        <div class="user-info">
+            <strong>Моя реферальная ссылка:</strong><br>
+            <span class="referral-link">Загрузка...</span>
+        </div>
+        
+        <button class="auto-copy-referral">📋 Скопировать реферальную ссылку</button>
+    </div>
+    
+    <hr>
+    
+    <h3>📋 Код для копирования в Tilda Zero Block:</h3>
+    
+    <h4>1. HTML код (вставить в HTML секцию Zero Block):</h4>
+    <textarea style="width: 100%; height: 200px; font-family: monospace;">
+<!-- Замените rec1235790536 на реальный ID вашего Zero Block! -->
+<div class="user-info-block">
+    <h3>👤 Мой профиль</h3>
+    
+    <p><strong>Имя:</strong> <span class="user-name">Загрузка...</span></p>
+    <p><strong>Email:</strong> <span class="user-email">Загрузка...</span></p>
+    <p><strong>Баланс:</strong> <span class="user-balance">Загрузка...</span> сом</p>
+    
+    <h4>👥 Мои рефералы</h4>
+    <p><strong>Количество:</strong> <span class="referral-count">Загрузка...</span></p>
+    <p><strong>Первый реферал:</strong> <span class="referral-first-name">Загрузка...</span></p>
+    <p><strong>Все рефералы:</strong> <span class="referral-all-names">Загрузка...</span></p>
+    <p><strong>Подробно:</strong> <span class="referral-detailed">Загрузка...</span></p>
+    
+    <h4>🔗 Моя реферальная ссылка</h4>
+    <p><span class="referral-link">Загрузка...</span></p>
+    <button class="auto-copy-referral">📋 Скопировать ссылку</button>
+</div>
+    </textarea>
+    
+    <h4>2. CSS код (вставить в CSS секцию Zero Block):</h4>
+    <textarea style="width: 100%; height: 150px; font-family: monospace;">
+.user-info-block {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.auto-copy-referral {
+    background: #FF9800;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+}
+
+.auto-copy-referral:hover {
+    background: #F57C00;
+}
+    </textarea>
+    
+    <h4>3. JavaScript код (вставить в отдельный T123 блок на той же странице):</h4>
+    <p><strong>Скопируйте весь код из файла:</strong> <code>user-display-fixed.html</code></p>
+    <p><strong>ВАЖНО:</strong> Замените <code>rec1235790536</code> на реальный ID вашего Zero Block!</p>
+
+    <!-- Подключаем исправленный скрипт -->
+    <script>
+    (function() {
+        'use strict';
+        
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+        
+        // НАСТРОЙКА ЭЛЕМЕНТОВ (ID блока уже правильный для этого теста)
+        const USER_ELEMENTS = {
+            '#rec1235790536 .user-name': 'name',
+            '#rec1235790536 .user-email': 'email',
+            '#rec1235790536 .user-balance': 'balance_kgs',
+            '#rec1235790536 .referral-link': 'referral_link',
+            '#rec1235790536 .referral-count': 'referrals_level_1.count',
+            '#rec1235790536 .referral-first-name': 'referrals_level_1.first_name',
+            '#rec1235790536 .referral-all-names': 'referrals_level_1.names',
+            '#rec1235790536 .referral-detailed': 'referrals_level_1.all_names'
+        };
+        
+        console.log('🎯 Инициализация отображения данных пользователя...');
+        
+        let currentUserData = null;
+        let currentReferralsData = null;
+        
+        // Функция для получения рефералов
+        async function getUserReferrals(email) {
+            try {
+                console.log('👥 Запрашиваем рефералов для:', email);
+                
+                const response = await fetch(`${SERVER_URL}/get-user-referrals?email=${encodeURIComponent(email)}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Рефералы получены:', data);
+                
+                if (data.success) {
+                    currentReferralsData = data;
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('❌ Ошибка при получении рефералов:', error);
+                return null;
+            }
+        }
+        
+        // Функция для автокопирования
+        function setupAutoCopyReferralLink() {
+            if (!currentUserData || !currentUserData.referral_link) {
+                console.log('⚠️ Нет реферальной ссылки для копирования');
+                return;
+            }
+            
+            const autoCopyElements = document.querySelectorAll('.auto-copy-referral, [data-auto-copy="referral"]');
+            
+            autoCopyElements.forEach(element => {
+                element.style.cursor = 'pointer';
+                element.title = 'Нажмите чтобы скопировать реферальную ссылку';
+                
+                element.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    
+                    try {
+                        await navigator.clipboard.writeText(currentUserData.referral_link);
+                        
+                        const originalText = element.textContent;
+                        element.textContent = '✅ Скопировано!';
+                        element.style.backgroundColor = '#4CAF50';
+                        
+                        setTimeout(() => {
+                            element.textContent = originalText;
+                            element.style.backgroundColor = '';
+                        }, 2000);
+                        
+                        console.log('✅ Реферальная ссылка скопирована:', currentUserData.referral_link);
+                    } catch (err) {
+                        console.error('❌ Ошибка копирования:', err);
+                        alert('Ссылка скопирована: ' + currentUserData.referral_link);
+                    }
+                });
+            });
+            
+            console.log(`🔗 Настроено автокопирование для ${autoCopyElements.length} элементов`);
+        }
+        
+        // Функция для получения вложенных значений
+        function getNestedValue(obj, path) {
+            try {
+                if (path.startsWith('referrals_level_')) {
+                    const level = parseInt(path.split('_')[2]);
+                    const field = path.split('.')[1];
+                    
+                    if (currentReferralsData && currentReferralsData.referrals) {
+                        const levelKey = `level_${level}`;
+                        const levelReferrals = currentReferralsData.referrals[levelKey];
+                        
+                        if (levelReferrals && levelReferrals.users && levelReferrals.users.length > 0) {
+                            if (field === 'count') return levelReferrals.count;
+                            if (field === 'names') return levelReferrals.users.map(ref => ref.name).join(', ');
+                            if (field === 'first_name') return levelReferrals.users[0].name;
+                            if (field === 'all_names') return levelReferrals.users.map(ref => `${ref.name} (${ref.email})`).join(', ');
+                        }
+                    }
+                    
+                    if (field === 'count') {
+                        return obj[`level_${level}_referrals`] || 0;
+                    }
+                    
+                    const referralCount = obj[`level_${level}_referrals`] || 0;
+                    if (referralCount > 0) {
+                        if (field === 'first_name') return `Реферал ${level} уровня (${referralCount})`;
+                        if (field === 'names') return `${referralCount} реферал(ов) ${level} уровня`;
+                    }
+                    
+                    return field === 'count' ? 0 : 'Нет рефералов';
+                }
+                
+                return path.split('.').reduce((current, key) => {
+                    if (current === null || current === undefined) return undefined;
+                    if (!isNaN(key) && Array.isArray(current)) return current[parseInt(key)];
+                    return current[key];
+                }, obj);
+            } catch (error) {
+                console.warn(`⚠️ Ошибка получения значения для пути "${path}":`, error);
+                return undefined;
+            }
+        }
+        
+        // Функция для получения данных пользователя
+        async function getCurrentUser() {
+            try {
+                console.log('🔍 Запрашиваем данные пользователя...');
+                
+                // Для теста используем конкретный email
+                const testEmail = 'kuvaldakg777@gmail.com';
+                const response = await fetch(`${SERVER_URL}/user-full-data?email=${encodeURIComponent(testEmail)}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Ответ сервера:', data);
+                
+                if (data.success && data.user) {
+                    currentUserData = data.user;
+                    console.log('💾 Данные пользователя сохранены');
+                    
+                    if (currentUserData.email) {
+                        await getUserReferrals(currentUserData.email);
+                    }
+                }
+                
+                return data;
+            } catch (error) {
+                console.error('❌ Ошибка при получении данных пользователя:', error);
+                return null;
+            }
+        }
+        
+        // Функция для обновления элементов
+        function updateUserElements(userData) {
+            if (!userData || !userData.success || !userData.user) {
+                console.log('ℹ️ Нет данных пользователя для отображения');
+                return;
+            }
+            
+            const user = userData.user;
+            let updatedCount = 0;
+            
+            Object.keys(USER_ELEMENTS).forEach(selector => {
+                const fieldName = USER_ELEMENTS[selector];
+                const elements = document.querySelectorAll(selector);
+                
+                if (elements.length === 0) {
+                    console.log(`⚠️ Элемент не найден: ${selector}`);
+                    return;
+                }
+                
+                const value = getNestedValue(user, fieldName);
+                
+                if (value !== undefined && value !== null) {
+                    elements.forEach(element => {
+                        element.textContent = value;
+                    });
+                    
+                    updatedCount++;
+                    console.log(`✅ Обновлен элемент ${selector}: "${value}"`);
+                }
+            });
+            
+            if (updatedCount > 0) {
+                console.log(`🎉 Успешно обновлено ${updatedCount} элементов`);
+            }
+            
+            setupAutoCopyReferralLink();
+        }
+        
+        // Основная функция
+        async function initUserDisplay() {
+            console.log('🚀 Запуск системы отображения данных...');
+            
+            try {
+                const userData = await getCurrentUser();
+                
+                if (userData && userData.success) {
+                    console.log('✅ Данные получены успешно');
+                    updateUserElements(userData);
+                } else {
+                    console.log('⚠️ Данные недоступны');
+                }
+                
+            } catch (error) {
+                console.error('❌ Критическая ошибка:', error);
+            }
+        }
+        
+        // Запуск
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initUserDisplay);
+        } else {
+            initUserDisplay();
+        }
+        
+    })();
+    </script>
+</body>
+</html>

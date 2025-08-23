@@ -7,12 +7,12 @@ dotenv.config();
 
 const app = express();
 
-// Упрощенные CORS настройки для тестирования
+// CORS настройки для работы с Tilda
 app.use(cors({
-  origin: '*', // Разрешаем все домены
+  origin: ['https://aida.kg', 'https://www.aida.kg', 'http://localhost:3000', 'https://tilda.cc'], // Конкретные домены
   methods: ["GET", "POST", "OPTIONS"],
-  credentials: false,
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  credentials: true, // Разрешаем cookies
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Cookie"]
 }));
 
 app.use(express.json());

@@ -1,0 +1,323 @@
+<!-- 
+ИСПРАВЛЕННАЯ ВЕРСИЯ СКРИПТА ДЛЯ ОТОБРАЖЕНИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ
+Вставьте этот код в блок T123 на страницах где нужно показать данные пользователя
+
+НАСТРОЙКА:
+1. Измените USER_ELEMENTS - укажите селекторы ваших элементов и какие поля из базы показывать
+2. Замените rec1235790536 на реальный ID вашего Zero Block
+3. Система автоматически получит ВСЕ поля из таблицы users в Supabase
+-->
+
+<script>
+(function() {
+    'use strict';
+    
+    const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+    
+    // ========================================
+    // НАСТРОЙКА ЭЛЕМЕНТОВ ДЛЯ ОТОБРАЖЕНИЯ
+    // ========================================
+    const USER_ELEMENTS = {
+        // ЗАМЕНИТЕ rec1235790536 на ID вашего Zero Block!
+        
+        // Основная информация пользователя
+        '#rec1235790536 .user-name': 'name',
+        '#rec1235790536 .user-email': 'email',
+        '#rec1235790536 .user-balance': 'balance_kgs',
+        '#rec1235790536 .referral-link': 'referral_link',
+        
+        // НОВОЕ: Реальные имена рефералов
+        '#rec1235790536 .referral-count': 'referrals_level_1.count',
+        '#rec1235790536 .referral-first-name': 'referrals_level_1.first_name',
+        '#rec1235790536 .referral-all-names': 'referrals_level_1.names',
+        '#rec1235790536 .referral-detailed': 'referrals_level_1.all_names'
+        
+        // ВАЖНО: После последнего элемента НЕТ запятой!
+    };
+    
+    console.log('🎯 Инициализация отображения данных пользователя...');
+    console.log('📋 Настроенные элементы:', USER_ELEMENTS);
+    
+    // Переменные для хранения данных
+    let currentUserData = null;
+    let currentReferralsData = null;
+    
+    // Функция для получения рефералов пользователя (реальные имена)
+    async function getUserReferrals(email) {
+        try {
+            console.log('👥 Запрашиваем рефералов для:', email);
+            
+            const response = await fetch(`${SERVER_URL}/get-user-referrals?email=${encodeURIComponent(email)}`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Рефералы получены:', data);
+            
+            if (data.success) {
+                currentReferralsData = data;
+                console.log('💾 Данные рефералов сохранены:', {
+                    level1: data.referrals.level_1.count,
+                    level2: data.referrals.level_2.count,
+                    level3: data.referrals.level_3.count
+                });
+                
+                // Выводим имена рефералов
+                if (data.referrals.level_1.users.length > 0) {
+                    console.log('👤 Рефералы 1 уровня:', data.referrals.level_1.users.map(u => u.name));
+                }
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Ошибка при получении рефералов:', error);
+            return null;
+        }
+    }
+    
+    // Функция для автокопирования реферальной ссылки
+    function setupAutoCopyReferralLink() {
+        if (!currentUserData || !currentUserData.referral_link) {
+            console.log('⚠️ Нет реферальной ссылки для копирования');
+            return;
+        }
+        
+        // Ищем элементы с классом для автокопирования
+        const autoCopyElements = document.querySelectorAll('.auto-copy-referral, [data-auto-copy="referral"]');
+        
+        autoCopyElements.forEach(element => {
+            element.style.cursor = 'pointer';
+            element.title = 'Нажмите чтобы скопировать реферальную ссылку';
+            
+            // Добавляем обработчик клика
+            element.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    await navigator.clipboard.writeText(currentUserData.referral_link);
+                    
+                    // Показываем уведомление
+                    const originalText = element.textContent;
+                    element.textContent = '✅ Скопировано!';
+                    element.style.color = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        element.textContent = originalText;
+                        element.style.color = '';
+                    }, 2000);
+                    
+                    console.log('✅ Реферальная ссылка скопирована:', currentUserData.referral_link);
+                } catch (err) {
+                    console.error('❌ Ошибка копирования:', err);
+                    
+                    // Fallback для старых браузеров
+                    const textArea = document.createElement('textarea');
+                    textArea.value = currentUserData.referral_link;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    const originalText = element.textContent;
+                    element.textContent = '✅ Скопировано!';
+                    element.style.color = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        element.textContent = originalText;
+                        element.style.color = '';
+                    }, 2000);
+                }
+            });
+        });
+        
+        console.log(`🔗 Настроено автокопирование для ${autoCopyElements.length} элементов`);
+    }
+    
+    // Функция для получения вложенных значений
+    function getNestedValue(obj, path) {
+        try {
+            // Специальные функции для рефералов по уровням
+            if (path.startsWith('referrals_level_')) {
+                const level = parseInt(path.split('_')[2]); // referrals_level_1 -> 1
+                const field = path.split('.')[1]; // referrals_level_1.name -> name
+                
+                // Сначала пробуем получить данные из currentReferralsData (реальные имена рефералов)
+                if (currentReferralsData && currentReferralsData.referrals) {
+                    const levelKey = `level_${level}`;
+                    const levelReferrals = currentReferralsData.referrals[levelKey];
+                    
+                    if (levelReferrals && levelReferrals.users && levelReferrals.users.length > 0) {
+                        if (field === 'count') return levelReferrals.count;
+                        if (field === 'names') return levelReferrals.users.map(ref => ref.name).join(', ');
+                        if (field === 'first_name') return levelReferrals.users[0].name;
+                        if (field === 'first_email') return levelReferrals.users[0].email;
+                        if (field === 'first_date') return levelReferrals.users[0].created_at;
+                        if (field === 'all_names') return levelReferrals.users.map(ref => `${ref.name} (${ref.email})`).join(', ');
+                    }
+                }
+                
+                // Fallback: используем основные поля из таблицы users
+                if (field === 'count') {
+                    const fieldName = `level_${level}_referrals`;
+                    return obj[fieldName] || 0;
+                }
+                
+                // Если нет детальных данных, но есть количество рефералов
+                const referralCount = obj[`level_${level}_referrals`] || 0;
+                if (referralCount > 0) {
+                    if (field === 'first_name') return `Реферал ${level} уровня (${referralCount})`;
+                    if (field === 'names') return `${referralCount} реферал(ов) ${level} уровня`;
+                }
+                
+                return field === 'count' ? 0 : 'Нет рефералов';
+            }
+            
+            return path.split('.').reduce((current, key) => {
+                if (current === null || current === undefined) {
+                    return undefined;
+                }
+                
+                // Проверяем если ключ - это число (индекс массива)
+                if (!isNaN(key) && Array.isArray(current)) {
+                    const index = parseInt(key);
+                    return current[index];
+                }
+                
+                // Обычное свойство объекта
+                return current[key];
+            }, obj);
+        } catch (error) {
+            console.warn(`⚠️ Ошибка получения значения для пути "${path}":`, error);
+            return undefined;
+        }
+    }
+    
+    // Функция для получения полных данных текущего авторизованного пользователя
+    async function getCurrentUser() {
+        try {
+            console.log('🔍 Запрашиваем полные данные текущего пользователя...');
+            
+            const response = await fetch(`${SERVER_URL}/user-full-data`, {
+                method: 'GET',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Ответ сервера:', data);
+            
+            // Сохраняем данные пользователя
+            if (data.success && data.user) {
+                currentUserData = data.user;
+                console.log('💾 Все данные пользователя сохранены:', currentUserData);
+                
+                // Получаем реальные данные рефералов (имена)
+                if (currentUserData.email) {
+                    await getUserReferrals(currentUserData.email);
+                }
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Ошибка при получении данных пользователя:', error);
+            return null;
+        }
+    }
+    
+    // Функция для обновления элементов на странице
+    function updateUserElements(userData) {
+        if (!userData || !userData.success || !userData.user) {
+            console.log('ℹ️ Нет данных пользователя для отображения');
+            return;
+        }
+        
+        const user = userData.user;
+        let updatedCount = 0;
+        
+        Object.keys(USER_ELEMENTS).forEach(selector => {
+            const fieldName = USER_ELEMENTS[selector];
+            const elements = document.querySelectorAll(selector);
+            
+            if (elements.length === 0) {
+                console.log(`⚠️ Элемент не найден: ${selector}`);
+                return;
+            }
+            
+            const value = getNestedValue(user, fieldName);
+            
+            if (value !== undefined && value !== null) {
+                elements.forEach(element => {
+                    // Сохраняем оригинальный текст
+                    if (!element.dataset.originalText) {
+                        element.dataset.originalText = element.textContent;
+                    }
+                    
+                    // Обновляем содержимое
+                    element.textContent = value;
+                });
+                
+                updatedCount++;
+                console.log(`✅ Обновлен элемент ${selector}: "${value}" (поле: ${fieldName})`);
+            }
+        });
+        
+        // Отчет о результатах
+        if (updatedCount > 0) {
+            console.log(`🎉 Успешно обновлено ${updatedCount} элементов на странице`);
+        } else {
+            console.log('❌ Не удалось обновить ни одного элемента');
+        }
+        
+        // Настраиваем автокопирование реферальной ссылки
+        setupAutoCopyReferralLink();
+    }
+    
+    // Основная функция инициализации
+    async function initUserDisplay() {
+        console.log('🚀 Запуск системы отображения данных пользователя...');
+        
+        try {
+            // Получаем данные пользователя
+            const userData = await getCurrentUser();
+            
+            if (userData && userData.success) {
+                console.log('✅ Данные пользователя получены успешно');
+                
+                // Обновляем элементы на странице
+                updateUserElements(userData);
+                
+            } else {
+                console.log('⚠️ Пользователь не авторизован или данные недоступны');
+            }
+            
+        } catch (error) {
+            console.error('❌ Критическая ошибка при инициализации:', error);
+        }
+    }
+    
+    // Запускаем инициализацию когда DOM готов
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUserDisplay);
+    } else {
+        // DOM уже готов
+        initUserDisplay();
+    }
+    
+    console.log('📋 Скрипт отображения данных пользователя загружен');
+})();
+</script>
