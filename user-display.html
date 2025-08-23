@@ -216,7 +216,17 @@
         try {
             console.log('🔍 Запрашиваем данные пользователя...');
             
-            const response = await fetch(`${SERVER_URL}/user-full-data`, {
+            // Сначала пробуем получить email из localStorage
+            const storedEmail = localStorage.getItem('tilda_auth_user');
+            console.log('📧 Email из localStorage:', storedEmail);
+            
+            let url = `${SERVER_URL}/user-full-data`;
+            if (storedEmail) {
+                url += `?email=${encodeURIComponent(storedEmail)}`;
+                console.log('🔗 Запрос с email из localStorage:', url);
+            }
+            
+            const response = await fetch(url, {
                 method: 'GET',
                 mode: 'cors',
                 credentials: 'include', // Включаем отправку куков

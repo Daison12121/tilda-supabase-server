@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест сессий</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .result {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест индивидуальных сессий</h1>
+    
+    <div class="test-section">
+        <h3>1. Авторизация пользователя</h3>
+        <input type="email" id="testEmail" placeholder="Введите email" value="kuvaldakg777@gmail.com">
+        <button onclick="testAuth()">🔐 Авторизоваться</button>
+        <div id="authResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Получение данных пользователя</h3>
+        <button onclick="testUserData()">👤 Получить данные</button>
+        <div id="userResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Информация о сессии</h3>
+        <button onclick="testSession()">🍪 Проверить сессию</button>
+        <div id="sessionResult" class="result"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+
+        async function testAuth() {
+            const email = document.getElementById('testEmail').value;
+            const resultDiv = document.getElementById('authResult');
+            
+            if (!email) {
+                resultDiv.textContent = 'Введите email!';
+                return;
+            }
+            
+            try {
+                resultDiv.textContent = 'Отправляем запрос авторизации...';
+                
+                const response = await fetch(`${SERVER_URL}/auth-sync`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include', // Важно!
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        action: 'login',
+                        timestamp: new Date().toISOString(),
+                        source: 'test',
+                        page: window.location.href
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultDiv.textContent = 'Ошибка: ' + error.message;
+            }
+        }
+
+        async function testUserData() {
+            const resultDiv = document.getElementById('userResult');
+            
+            try {
+                resultDiv.textContent = 'Получаем данные пользователя...';
+                
+                const response = await fetch(`${SERVER_URL}/user-full-data`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include', // Важно!
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultDiv.textContent = 'Ошибка: ' + error.message;
+            }
+        }
+
+        async function testSession() {
+            const resultDiv = document.getElementById('sessionResult');
+            
+            try {
+                resultDiv.textContent = 'Проверяем сессию...';
+                
+                const response = await fetch(`${SERVER_URL}/current-user`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include', // Важно!
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultDiv.textContent = 'Ошибка: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

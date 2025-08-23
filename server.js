@@ -100,6 +100,8 @@ app.post("/tilda-webhook", async (req, res) => {
 app.post("/auth-sync", async (req, res) => {
   try {
     console.log('POST /auth-sync запрос:', req.body);
+    console.log('🍪 Session ID:', req.sessionID);
+    console.log('🍪 Session data before:', req.session);
     
     const { email, action, timestamp, source, page } = req.body;
     
@@ -135,6 +137,7 @@ app.post("/auth-sync", async (req, res) => {
     });
 
     console.log('✅ Сессия авторизации сохранена в session и global:', email);
+    console.log('🍪 Session data after:', req.session);
     
     // Получаем данные пользователя из Supabase
     const { data: userData, error } = await supabase
@@ -270,14 +273,22 @@ app.get("/get-user", async (req, res) => {
 app.get("/user-full-data", async (req, res) => {
   try {
     console.log('GET /user-full-data запрос');
+    console.log('🍪 Session ID:', req.sessionID);
+    console.log('🍪 Session data:', req.session);
+    console.log('🍪 Cookies:', req.cookies);
+    console.log('📧 Query email:', req.query.email);
     
     // Получаем email из параметров или из сессии текущего пользователя
     let email = req.query.email;
+    let emailSource = 'query';
     
-    if (!email) {
+    if (email) {
+      console.log('📧 Email взят из параметров запроса:', email);
+    } else {
       // Если email не передан, берем из сессии текущего пользователя
       if (req.session && req.session.userEmail) {
         email = req.session.userEmail;
+        emailSource = 'session';
         console.log('📧 Email взят из сессии пользователя:', email);
       } else {
         // Fallback: ищем в глобальных сессиях (старый способ)
@@ -424,7 +435,13 @@ app.get("/user-full-data", async (req, res) => {
     res.json({ 
       success: true, 
       user: fullUserData,
-      message: "Full user data retrieved successfully"
+      message: "Full user data retrieved successfully",
+      debug: {
+        emailSource: emailSource,
+        requestedEmail: email,
+        sessionId: req.sessionID,
+        hasSession: !!req.session.userEmail
+      }
     });
 
   } catch (err) {
