@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест полных данных пользователя</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .field {
+            margin: 10px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .field-name {
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .field-value {
+            color: #333;
+            margin-left: 10px;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+        }
+        
+        button:hover {
+            background: #1976d2;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            border: 1px solid #2196F3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .array-item {
+            background: #f0f0f0;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗄️ Тест полных данных пользователя</h1>
+        
+        <div class="info">
+            <strong>Этот тест показывает ВСЕ данные</strong> которые система может получить из расширенной базы данных:
+            <ul>
+                <li>✅ Основные поля пользователя</li>
+                <li>✅ Курсы пользователя</li>
+                <li>✅ Платежи пользователя</li>
+                <li>✅ Реферальные транзакции</li>
+                <li>✅ История рефералов</li>
+                <li>✅ Статистика</li>
+            </ul>
+        </div>
+        
+        <div class="controls">
+            <button onclick="loadFullData()">🔄 Загрузить полные данные</button>
+            <button onclick="testSpecificUser()">🧪 Тест конкретного пользователя</button>
+            <button onclick="clearData()">🗑️ Очистить</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+        
+        // Функция для загрузки полных данных
+        async function loadFullData() {
+            try {
+                console.log('🔄 Загружаем полные данные пользователя...');
+                
+                const response = await fetch(`${SERVER_URL}/user-full-data`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Полные данные получены:', data);
+                
+                displayFullData(data);
+                
+            } catch (error) {
+                console.error('❌ Ошибка загрузки:', error);
+                document.getElementById('results').innerHTML = `
+                    <div class="section">
+                        <h3>❌ Ошибка</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Функция для тестирования конкретного пользователя
+        async function testSpecificUser() {
+            const email = prompt('Введите email пользователя для тестирования:', 'barbarosgroup2024@gmail.com');
+            if (!email) return;
+            
+            try {
+                console.log('🧪 Тестируем пользователя:', email);
+                
+                const response = await fetch(`${SERVER_URL}/user-full-data?email=${encodeURIComponent(email)}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Данные пользователя получены:', data);
+                
+                displayFullData(data);
+                
+            } catch (error) {
+                console.error('❌ Ошибка тестирования:', error);
+                document.getElementById('results').innerHTML = `
+                    <div class="section">
+                        <h3>❌ Ошибка</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Функция для отображения полных данных
+        function displayFullData(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!data.success || !data.user) {
+                resultsDiv.innerHTML = `
+                    <div class="section">
+                        <h3>ℹ️ Нет данных</h3>
+                        <p>${data.message || 'Пользователь не найден'}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const user = data.user;
+            
+            let html = `
+                <div class="section">
+                    <h3>👤 Основная информация пользователя</h3>
+                    <div class="field"><span class="field-name">ID:</span><span class="field-value">${user.id || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Email:</span><span class="field-value">${user.email || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Имя:</span><span class="field-value">${user.name || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Дата регистрации:</span><span class="field-value">${user.created_at || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Реферальный код:</span><span class="field-value">${user.referral_code || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Приглашен:</span><span class="field-value">${user.referred_by || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Реферальная ссылка:</span><span class="field-value">${user.referral_link || 'N/A'}</span></div>
+                    <div class="field"><span class="field-name">Баланс:</span><span class="field-value">${user.balance_kgs || 0} сом</span></div>
+                    <div class="field"><span class="field-name">Всего заработано:</span><span class="field-value">${user.total_earned || 0} сом</span></div>
+                    <div class="field"><span class="field-name">Рефералы 1 уровня:</span><span class="field-value">${user.level_1_referrals || 0}</span></div>
+                    <div class="field"><span class="field-name">Рефералы 2 уровня:</span><span class="field-value">${user.level_2_referrals || 0}</span></div>
+                    <div class="field"><span class="field-name">Рефералы 3 уровня:</span><span class="field-value">${user.level_3_referrals || 0}</span></div>
+                </div>
+            `;
+            
+            // Статистика
+            if (user.stats) {
+                html += `
+                    <div class="section">
+                        <h3>📊 Статистика</h3>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-number">${user.stats.total_courses || 0}</div>
+                                <div class="stat-label">Курсов</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${user.stats.total_payments || 0}</div>
+                                <div class="stat-label">Платежей</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${user.stats.completed_payments || 0}</div>
+                                <div class="stat-label">Завершенных</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${user.stats.pending_payments || 0}</div>
+                                <div class="stat-label">Ожидающих</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${user.stats.total_referral_earnings || 0}</div>
+                                <div class="stat-label">Заработок с рефералов</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Курсы
+            if (user.courses && user.courses.length > 0) {
+                html += `
+                    <div class="section">
+                        <h3>🎓 Курсы пользователя (${user.courses.length})</h3>
+                `;
+                user.courses.forEach((course, index) => {
+                    html += `
+                        <div class="array-item">
+                            <strong>Курс ${index + 1}:</strong> ID ${course.course_id}, доступ с ${course.access_granted_at || 'N/A'}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            // Платежи
+            if (user.payments && user.payments.length > 0) {
+                html += `
+                    <div class="section">
+                        <h3>💳 Платежи пользователя (${user.payments.length})</h3>
+                `;
+                user.payments.forEach((payment, index) => {
+                    html += `
+                        <div class="array-item">
+                            <strong>Платеж ${index + 1}:</strong> ${payment.amount} сом, статус: ${payment.status}, дата: ${payment.paid_at || 'N/A'}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            // Реферальные транзакции
+            if (user.referral_transactions && user.referral_transactions.length > 0) {
+                html += `
+                    <div class="section">
+                        <h3>💰 Реферальные транзакции (${user.referral_transactions.length})</h3>
+                `;
+                user.referral_transactions.forEach((transaction, index) => {
+                    html += `
+                        <div class="array-item">
+                            <strong>Транзакция ${index + 1}:</strong> ${transaction.amount} сом, уровень ${transaction.level}, дата: ${transaction.transaction_date || 'N/A'}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            // История рефералов
+            if (user.referral_history && user.referral_history.length > 0) {
+                html += `
+                    <div class="section">
+                        <h3>📜 История рефералов (${user.referral_history.length})</h3>
+                `;
+                user.referral_history.forEach((history, index) => {
+                    html += `
+                        <div class="array-item">
+                            <strong>Запись ${index + 1}:</strong> ${history.user_name} (${history.user_email}), ${history.amount} сом, уровень ${history.level}
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+            
+            // Примеры использования в USER_ELEMENTS
+            html += `
+                <div class="section">
+                    <h3>🔧 Примеры для USER_ELEMENTS</h3>
+                    <div class="field"><code>'.user-name': 'name'</code> → ${user.name || 'N/A'}</div>
+                    <div class="field"><code>'.balance': 'balance_kgs'</code> → ${user.balance_kgs || 0}</div>
+                    <div class="field"><code>'.total-courses': 'stats.total_courses'</code> → ${user.stats?.total_courses || 0}</div>
+                    <div class="field"><code>'.courses-count': 'courses.length'</code> → ${user.courses?.length || 0}</div>
+                    <div class="field"><code>'.last-payment': 'payments.0.amount'</code> → ${user.payments?.[0]?.amount || 'N/A'}</div>
+                    <div class="field"><code>'.referral-earnings': 'stats.total_referral_earnings'</code> → ${user.stats?.total_referral_earnings || 0}</div>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        // Функция для очистки данных
+        function clearData() {
+            document.getElementById('results').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

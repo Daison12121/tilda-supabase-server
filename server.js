@@ -235,6 +235,170 @@ app.get("/get-user", async (req, res) => {
   }
 });
 
+// GET /user-full-data — получение полных данных пользователя со всеми связанными таблицами
+app.get("/user-full-data", async (req, res) => {
+  try {
+    console.log('GET /user-full-data запрос');
+    
+    // Получаем email из параметров или из активной сессии
+    let email = req.query.email;
+    
+    if (!email) {
+      // Если email не передан, ищем в активных сессиях
+      if (!global.authSessions) {
+        return res.json({ 
+          success: true, 
+          user: null,
+          message: "No email provided and no active sessions"
+        });
+      }
+
+      // Находим последнюю активную сессию
+      let latestSession = null;
+      let latestTime = 0;
+      
+      for (const [sessionEmail, session] of global.authSessions.entries()) {
+        const sessionTime = new Date(session.timestamp).getTime();
+        if (sessionTime > latestTime) {
+          latestTime = sessionTime;
+          latestSession = session;
+        }
+      }
+
+      if (!latestSession) {
+        return res.json({ 
+          success: true, 
+          user: null,
+          message: "No active sessions found"
+        });
+      }
+      
+      email = latestSession.email;
+    }
+
+    console.log('🔍 Получаем полные данные для пользователя:', email);
+
+    // 1. Получаем основные данные пользователя
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (userError && userError.code === "PGRST116") {
+      return res.json({ 
+        success: true, 
+        user: null,
+        message: "User not found in database"
+      });
+    } else if (userError) {
+      throw userError;
+    }
+
+    console.log('✅ Основные данные пользователя получены');
+
+    // 2. Получаем курсы пользователя
+    const { data: userCourses, error: coursesError } = await supabase
+      .from("user_courses")
+      .select("*")
+      .eq("user_id", userData.id);
+
+    if (coursesError) {
+      console.warn('⚠️ Ошибка получения курсов:', coursesError);
+    }
+
+    // 3. Получаем платежи пользователя
+    const { data: userPayments, error: paymentsError } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("user_id", userData.id)
+      .order("paid_at", { ascending: false });
+
+    if (paymentsError) {
+      console.warn('⚠️ Ошибка получения платежей:', paymentsError);
+    }
+
+    // 4. Получаем реферальные транзакции пользователя (где он получатель)
+    const { data: referralTransactions, error: transactionsError } = await supabase
+      .from("referral_transactions")
+      .select("*")
+      .eq("referrer_id", userData.id)
+      .order("transaction_date", { ascending: false });
+
+    if (transactionsError) {
+      console.warn('⚠️ Ошибка получения реферальных транзакций:', transactionsError);
+    }
+
+    // 5. Получаем историю рефералов (детальная информация)
+    const { data: referralHistory, error: historyError } = await supabase
+      .from("referral_history")
+      .select("*")
+      .eq("referrer_id", userData.id)
+      .order("transaction_date", { ascending: false });
+
+    if (historyError) {
+      console.warn('⚠️ Ошибка получения истории рефералов:', historyError);
+    }
+
+    // 6. Получаем реферальные транзакции где пользователь является источником
+    const { data: userAsSourceTransactions, error: sourceTransactionsError } = await supabase
+      .from("referral_transactions")
+      .select("*")
+      .eq("user_id", userData.id)
+      .order("transaction_date", { ascending: false });
+
+    if (sourceTransactionsError) {
+      console.warn('⚠️ Ошибка получения транзакций как источник:', sourceTransactionsError);
+    }
+
+    // Формируем полный ответ
+    const fullUserData = {
+      // Основные данные пользователя
+      ...userData,
+      
+      // Дополнительные данные
+      courses: userCourses || [],
+      payments: userPayments || [],
+      referral_transactions: referralTransactions || [],
+      referral_history: referralHistory || [],
+      user_transactions: userAsSourceTransactions || [],
+      
+      // Статистика
+      stats: {
+        total_courses: (userCourses || []).length,
+        total_payments: (userPayments || []).length,
+        total_referral_transactions: (referralTransactions || []).length,
+        total_referral_history: (referralHistory || []).length,
+        completed_payments: (userPayments || []).filter(p => p.status === 'completed').length,
+        pending_payments: (userPayments || []).filter(p => p.status === 'pending').length,
+        total_referral_earnings: (referralTransactions || []).reduce((sum, t) => sum + parseFloat(t.amount || 0), 0),
+      }
+    };
+
+    console.log('🎉 Полные данные пользователя собраны:', {
+      email: userData.email,
+      courses: fullUserData.courses.length,
+      payments: fullUserData.payments.length,
+      referral_transactions: fullUserData.referral_transactions.length,
+      referral_history: fullUserData.referral_history.length
+    });
+
+    res.json({ 
+      success: true, 
+      user: fullUserData,
+      message: "Full user data retrieved successfully"
+    });
+
+  } catch (err) {
+    console.error('❌ Ошибка в /user-full-data:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message,
+      details: "Failed to get full user data"
+    });
+  }
+});
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("🚀 Server запущен на порту " + (process.env.PORT || 3000));
 });
