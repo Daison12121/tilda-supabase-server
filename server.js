@@ -7,11 +7,11 @@ dotenv.config();
 
 const app = express();
 
-// Простые CORS настройки
+// Упрощенные CORS настройки для тестирования
 app.use(cors({
   origin: '*', // Разрешаем все домены
   methods: ["GET", "POST", "OPTIONS"],
-  credentials: false, // Без cookies
+  credentials: false,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 

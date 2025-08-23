@@ -1,12 +1,6 @@
 <!-- 
-СКРИПТ ДЛЯ ОТОБРАЖЕНИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ
+ПОЛНАЯ СИСТЕМА ОТОБРАЖЕНИЯ ДАННЫХ ПОЛЬЗОВАТЕЛЯ С РЕАЛЬНЫМИ ИМЕНАМИ РЕФЕРАЛОВ
 Вставьте этот код в блок T123 на страницах где нужно показать данные пользователя
-(НЕ на странице авторизации - там используйте auth-interceptor.html)
-
-НАСТРОЙКА:
-1. Измените USER_ELEMENTS - укажите селекторы ваших элементов и какие поля из базы показывать
-2. Система автоматически получит ВСЕ поля из таблицы users в Supabase
-3. Вы можете использовать любые поля, которые есть в вашей таблице
 -->
 
 <script>
@@ -14,32 +8,22 @@
     'use strict';
     
     const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
-    
+
     // ========================================
     // НАСТРОЙКА ЭЛЕМЕНТОВ ДЛЯ ОТОБРАЖЕНИЯ
     // ========================================
     const USER_ELEMENTS = {
         // Формат: 'CSS селектор': 'поле_из_базы_данных'
-        
-        // Селекторы по классам (работают на любой странице):
-        '.t-name': 'name',                    // Имя пользователя
-        '.t-email': 'email',                  // Email пользователя  
-        '.t-referral-code': 'referral_code',  // Реферальный код
-        '.t-balance': 'balance_kgs',          // Баланс в сомах
-        '.t-earned': 'total_earned',          // Всего заработано
-        
-        // НОВОЕ: Реальные имена рефералов
-        '.ref-count': 'referrals_level_1.count',
-        '.ref-first-name': 'referrals_level_1.first_name',
-        '.ref-all-names': 'referrals_level_1.names',
-        '.ref-detailed': 'referrals_level_1.all_names',
-        '.my-ref-link': 'referral_link'
-};
 
+        // Примеры для Zero Block с ID rec1235790536:
+        '#rec1235790536 .t-name': 'name',                    // Имя пользователя
+        '#rec1235790536 .t-email': 'email',                  // Email пользователя
+        '#rec1235790536 .t-referral-code': 'referral_code',  // Реферальный код
+        '#rec1235790536 .t-balance': 'balance_kgs',          // Баланс в сомах
+        '#rec1235790536 .t-earned': 'total_earned',          // Всего заработано
 
-        
         // ВСЕ ДОСТУПНЫЕ ПОЛЯ ИЗ БАЗЫ ДАННЫХ:
-        
+
         // === ОСНОВНАЯ ИНФОРМАЦИЯ ПОЛЬЗОВАТЕЛЯ ===
         // '.user-id': 'id',                        // UUID пользователя
         // '.user-name': 'name',                    // Имя пользователя
@@ -47,38 +31,38 @@
         // '.created-date': 'created_at',           // Дата регистрации
         // '.auth-uid': 'auth_uid',                 // UID авторизации
         // '.referral-link': 'referral_link',       // Реферальная ссылка
-        
+
         // === РЕФЕРАЛЬНАЯ СИСТЕМА ===
         // '.referral-code': 'referral_code',       // Реферальный код пользователя
         // '.referred-by': 'referred_by',           // Кем приглашен
         // '.level-1-refs': 'level_1_referrals',    // Рефералы 1 уровня
-        // '.level-2-refs': 'level_2_referrals',    // Рефералы 2 уровня  
+        // '.level-2-refs': 'level_2_referrals',    // Рефералы 2 уровня
         // '.level-3-refs': 'level_3_referrals',    // Рефералы 3 уровня
-        
+
         // === ФИНАНСОВАЯ ИНФОРМАЦИЯ ===
         // '.balance': 'balance_kgs',               // Текущий баланс в сомах
         // '.total-earned': 'total_earned',         // Всего заработано
-        
+
         // === СТАТИСТИКА (из stats объекта) ===
         // '.total-courses': 'stats.total_courses',           // Общее количество курсов
         // '.total-payments': 'stats.total_payments',         // Общее количество платежей
         // '.completed-payments': 'stats.completed_payments', // Завершенные платежи
         // '.pending-payments': 'stats.pending_payments',     // Ожидающие платежи
         // '.referral-earnings': 'stats.total_referral_earnings', // Заработок с рефералов
-        
+
         // === МАССИВЫ ДАННЫХ (для отображения количества) ===
         // '.courses-count': 'courses.length',         // Количество курсов
         // '.payments-count': 'payments.length',       // Количество платежей
         // '.referral-transactions-count': 'referral_transactions.length', // Количество реферальных транзакций
         // '.referral-history-count': 'referral_history.length',           // Количество записей в истории рефералов
-        
+
         // === ПОСЛЕДНИЕ ДАННЫЕ (первый элемент массива) ===
         // '.last-payment-amount': 'payments.0.amount',        // Сумма последнего платежа
         // '.last-payment-status': 'payments.0.status',        // Статус последнего платежа
         // '.last-payment-date': 'payments.0.paid_at',         // Дата последнего платежа
         // '.last-referral-amount': 'referral_transactions.0.amount',      // Сумма последней реферальной транзакции
         // '.last-referral-date': 'referral_transactions.0.transaction_date', // Дата последней реферальной транзакции
-        
+
         // === РЕФЕРАЛЫ ПО УРОВНЯМ (специальные функции) ===
         // '.referral-1-name': 'referrals_level_1.first_name',     // Имя первого реферала 1 уровня (РЕАЛЬНОЕ ИМЯ!)
         // '.referral-1-email': 'referrals_level_1.first_email',   // Email первого реферала 1 уровня
@@ -87,18 +71,18 @@
         // '.referral-1-names': 'referrals_level_1.names',         // Все имена рефералов 1 уровня через запятую
         // '.referral-1-all': 'referrals_level_1.all_names',       // Все рефералы с email: "Иван (ivan@mail.com), Петр (petr@mail.com)"
         // '.referral-1-total': 'referrals_level_1.total_amount',  // Общая сумма от рефералов 1 уровня
-        
+
         // '.referral-2-name': 'referrals_level_2.first_name',     // Имя первого реферала 2 уровня
         // '.referral-2-count': 'referrals_level_2.count',         // Количество рефералов 2 уровня
         // '.referral-3-name': 'referrals_level_3.first_name',     // Имя первого реферала 3 уровня
         // '.referral-3-count': 'referrals_level_3.count',         // Количество рефералов 3 уровня
-        
+
         // === АВТОКОПИРОВАНИЕ РЕФЕРАЛЬНОЙ ССЫЛКИ ===
         // Добавьте класс 'auto-copy-referral' или атрибут data-auto-copy="referral" к любому элементу
         // При клике на такой элемент реферальная ссылка автоматически скопируется в буфер обмена
         // '.my-referral-link': 'referral_link',                   // Показать реферальную ссылку
         // Пример: <div class="auto-copy-referral">Скопировать мою ссылку</div>
-        
+
         // === ПРИМЕРЫ РАЗНЫХ СЕЛЕКТОРОВ ===
         // '.profile .user-name': 'name',           // Вложенные элементы
         // '#user-balance': 'balance_kgs',          // По ID
@@ -106,14 +90,14 @@
         // '.stats .earned': 'total_earned',        // Статистика заработка
         // '.refs-count': 'level_1_referrals',      // Количество рефералов
     };
-    
-    console.log('???? Инициализация отображения данных пользователя...');
-    console.log('???? Настроенные элементы:', USER_ELEMENTS);
-    
+
+    console.log('🎯 Инициализация отображения данных пользователя...');
+    console.log('📋 Настроенные элементы:', USER_ELEMENTS);
+
     // Переменная для хранения всех данных пользователя
     let currentUserData = null;
     let currentReferralsData = null;
-    
+
     // Функция для получения вложенных значений (например, stats.total_courses, payments.0.amount)
     function getNestedValue(obj, path) {
         try {
@@ -121,12 +105,12 @@
             if (path.startsWith('referrals_level_')) {
                 const level = parseInt(path.split('_')[2]); // referrals_level_1 -> 1
                 const field = path.split('.')[1]; // referrals_level_1.name -> name
-                
+
                 // Сначала пробуем получить данные из currentReferralsData (реальные имена рефералов)
                 if (currentReferralsData && currentReferralsData.referrals) {
                     const levelKey = `level_${level}`;
                     const levelReferrals = currentReferralsData.referrals[levelKey];
-                    
+
                     if (levelReferrals && levelReferrals.users && levelReferrals.users.length > 0) {
                         if (field === 'count') return levelReferrals.count;
                         if (field === 'names') return levelReferrals.users.map(ref => ref.name).join(', ');
@@ -136,7 +120,7 @@
                         if (field === 'all_names') return levelReferrals.users.map(ref => `${ref.name} (${ref.email})`).join(', ');
                     }
                 }
-                
+
                 // Fallback: пробуем получить данные из referral_history (транзакции)
                 if (obj.referral_history && Array.isArray(obj.referral_history)) {
                     const levelReferrals = obj.referral_history.filter(ref => ref.level === level);
@@ -146,40 +130,34 @@
                         if (field === 'first_name') return levelReferrals[0].user_name;
                         if (field === 'first_email') return levelReferrals[0].user_email;
                         if (field === 'first_amount') return levelReferrals[0].amount;
-                        if (field === 'first_date') return levelReferrals[0].transaction_date;
-                        if (field === 'total_amount') return levelReferrals.reduce((sum, ref) => sum + parseFloat(ref.amount || 0), 0);
+                        if (field === 'total_amount') return levelReferrals.reduce((sum, ref) => sum + (ref.amount || 0), 0);
+                        if (field === 'all_names') return levelReferrals.map(ref => `${ref.user_name} (${ref.user_email})`).join(', ');
                     }
                 }
-                
-                // Fallback: используем основные поля из таблицы users
+
+                // Fallback: используем простые поля из основных данных пользователя
                 if (field === 'count') {
-                    const fieldName = `level_${level}_referrals`;
-                    return obj[fieldName] || 0;
+                    return obj[`level_${level}_referrals`] || 0;
                 }
-                
-                // Если нет детальных данных, но есть количество рефералов
-                const referralCount = obj[`level_${level}_referrals`] || 0;
-                if (referralCount > 0) {
-                    if (field === 'first_name') return `Реферал ${level} уровня (${referralCount})`;
-                    if (field === 'names') return `${referralCount} реферал(ов) ${level} уровня`;
-                    if (field === 'total_amount') return 'Данные загружаются...';
-                }
-                
+
+                // Если ничего не найдено, возвращаем значения по умолчанию
                 return field === 'count' ? 0 : 'Нет рефералов';
             }
-            
+
+            // Обычная обработка вложенных значений
             return path.split('.').reduce((current, key) => {
-                if (current === null || current === undefined) {
-                    return undefined;
-                }
+                if (current === null || current === undefined) return undefined;
                 
-                // Проверяем если ключ - это число (индекс массива)
+                // Обработка массивов с индексами (например, payments.0.amount)
                 if (!isNaN(key) && Array.isArray(current)) {
-                    const index = parseInt(key);
-                    return current[index];
+                    return current[parseInt(key)];
                 }
                 
-                // Обычное свойство объекта
+                // Обработка свойства length для массивов
+                if (key === 'length' && Array.isArray(current)) {
+                    return current.length;
+                }
+                
                 return current[key];
             }, obj);
         } catch (error) {
@@ -187,11 +165,11 @@
             return undefined;
         }
     }
-    
-    // Функция для получения рефералов пользователя (реальные имена)
+
+    // Функция для получения рефералов пользователя
     async function getUserReferrals(email) {
         try {
-            console.log('???? Запрашиваем рефералов для:', email);
+            console.log('👥 Запрашиваем рефералов для:', email);
             
             const response = await fetch(`${SERVER_URL}/get-user-referrals?email=${encodeURIComponent(email)}`, {
                 method: 'GET',
@@ -200,32 +178,17 @@
                     'Content-Type': 'application/json',
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
             console.log('✅ Рефералы получены:', data);
             
             if (data.success) {
                 currentReferralsData = data;
-                console.log('???? Данные рефералов сохранены:', {
-                    level1: data.referrals.level_1.count,
-                    level2: data.referrals.level_2.count,
-                    level3: data.referrals.level_3.count
-                });
-                
-                // Выводим имена рефералов
-                if (data.referrals.level_1.users.length > 0) {
-                    console.log('???? Рефералы 1 уровня:', data.referrals.level_1.users.map(u => u.name));
-                }
-                if (data.referrals.level_2.users.length > 0) {
-                    console.log('???? Рефералы 2 уровня:', data.referrals.level_2.users.map(u => u.name));
-                }
-                if (data.referrals.level_3.users.length > 0) {
-                    console.log('???? Рефералы 3 уровня:', data.referrals.level_3.users.map(u => u.name));
-                }
+                console.log('💾 Данные рефералов сохранены');
             }
             
             return data;
@@ -234,69 +197,54 @@
             return null;
         }
     }
-    
+
     // Функция для автокопирования реферальной ссылки
     function setupAutoCopyReferralLink() {
         if (!currentUserData || !currentUserData.referral_link) {
-            console.log('⚠️ Нет реферальной ссылки для копирования');
             return;
         }
         
-        // Ищем элементы с классом для автокопирования
         const autoCopyElements = document.querySelectorAll('.auto-copy-referral, [data-auto-copy="referral"]');
         
         autoCopyElements.forEach(element => {
             element.style.cursor = 'pointer';
             element.title = 'Нажмите чтобы скопировать реферальную ссылку';
             
-            // Добавляем обработчик клика
             element.addEventListener('click', async function(e) {
                 e.preventDefault();
                 
                 try {
                     await navigator.clipboard.writeText(currentUserData.referral_link);
                     
-                    // Показываем уведомление
                     const originalText = element.textContent;
+                    const originalBg = element.style.backgroundColor;
+                    
                     element.textContent = '✅ Скопировано!';
-                    element.style.color = '#4CAF50';
+                    element.style.backgroundColor = '#4CAF50';
+                    element.style.color = 'white';
                     
                     setTimeout(() => {
                         element.textContent = originalText;
+                        element.style.backgroundColor = originalBg;
                         element.style.color = '';
                     }, 2000);
                     
                     console.log('✅ Реферальная ссылка скопирована:', currentUserData.referral_link);
                 } catch (err) {
                     console.error('❌ Ошибка копирования:', err);
-                    
                     // Fallback для старых браузеров
-                    const textArea = document.createElement('textarea');
-                    textArea.value = currentUserData.referral_link;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    
-                    const originalText = element.textContent;
-                    element.textContent = '✅ Скопировано!';
-                    element.style.color = '#4CAF50';
-                    
-                    setTimeout(() => {
-                        element.textContent = originalText;
-                        element.style.color = '';
-                    }, 2000);
+                    alert('Ссылка скопирована: ' + currentUserData.referral_link);
                 }
             });
         });
         
-        console.log(`???? Настроено автокопирование для ${autoCopyElements.length} элементов`);
+        console.log(`🔗 Настроено автокопирование для ${autoCopyElements.length} элементов`);
     }
 
-    // Функция для получения полных данных текущего авторизованного пользователя
+    // Функция для получения данных пользователя
     async function getCurrentUser() {
         try {
-            console.log('???? Запрашиваем полные данные текущего пользователя...');
+            console.log('🔍 Запрашиваем данные пользователя...');
             
             const response = await fetch(`${SERVER_URL}/user-full-data`, {
                 method: 'GET',
@@ -305,39 +253,21 @@
                     'Content-Type': 'application/json',
                 }
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
             console.log('✅ Ответ сервера:', data);
             
-            // Сохраняем данные пользователя
             if (data.success && data.user) {
                 currentUserData = data.user;
-                console.log('???? Все данные пользователя сохранены:', currentUserData);
-                console.log('???? Доступные основные поля:', Object.keys(currentUserData).filter(key => !Array.isArray(currentUserData[key]) && typeof currentUserData[key] !== 'object'));
-                console.log('???? Доступные массивы:', Object.keys(currentUserData).filter(key => Array.isArray(currentUserData[key])));
-                console.log('???? Статистика:', currentUserData.stats || 'Нет статистики');
+                console.log('💾 Данные пользователя сохранены');
                 
-                // Выводим детальную информацию о данных
-                if (currentUserData.courses && currentUserData.courses.length > 0) {
-                    console.log('???? Курсы пользователя:', currentUserData.courses.length);
-                }
-                if (currentUserData.payments && currentUserData.payments.length > 0) {
-                    console.log('???? Платежи пользователя:', currentUserData.payments.length);
-                }
-                if (currentUserData.referral_transactions && currentUserData.referral_transactions.length > 0) {
-                    console.log('???? Реферальные транзакции:', currentUserData.referral_transactions.length);
-                }
-                if (currentUserData.referral_history && currentUserData.referral_history.length > 0) {
-                    console.log('???? История рефералов:', currentUserData.referral_history.length);
-                }
-                
-                // Получаем реальные данные рефералов (имена)
+                // Получаем рефералов с реальными именами
                 if (currentUserData.email) {
-                    getUserReferrals(currentUserData.email);
+                    await getUserReferrals(currentUserData.email);
                 }
             }
             
@@ -347,391 +277,76 @@
             return null;
         }
     }
-    
+
     // Функция для обновления элементов на странице
     function updateUserElements(userData) {
         if (!userData || !userData.success || !userData.user) {
             console.log('ℹ️ Нет данных пользователя для отображения');
-            restoreOriginalText();
             return;
         }
-        
+
         const user = userData.user;
-        console.log('???? Обновляем элементы на странице с данными:', user);
-        console.log('???? Доступные поля в данных:', Object.keys(user));
-        
         let updatedCount = 0;
-        let notFoundFields = [];
-        let notFoundElements = [];
-        
+
         Object.keys(USER_ELEMENTS).forEach(selector => {
             const fieldName = USER_ELEMENTS[selector];
             const elements = document.querySelectorAll(selector);
-            
+
             if (elements.length === 0) {
-                notFoundElements.push(selector);
-                console.log(`⚠️ Элементы не найдены для селектора: ${selector}`);
+                console.log(`⚠️ Элемент не найден: ${selector}`);
                 return;
             }
-            
-            // Получаем значение поля (поддерживаем вложенные поля)
+
             const value = getNestedValue(user, fieldName);
-            
-            if (value === undefined || value === null) {
-                notFoundFields.push(fieldName);
-                console.log(`⚠️ Поле "${fieldName}" отсутствует в данных пользователя`);
-                return;
-            }
-            
-            elements.forEach(element => {
-                // Сохраняем оригинальный текст и HTML если их еще нет
-                if (!element.dataset.originalText) {
-                    element.dataset.originalText = element.textContent;
-                    element.dataset.originalHTML = element.innerHTML;
-                }
-                
-                // НЕ добавляем никаких классов, чтобы не менять стили Zero Block
-                // element.classList.add('user-data-loaded'); // УБРАНО!
-                
-                // Значение уже получено выше через getNestedValue
-                
-                // Если элемент содержит только текст, используем textContent
-                // Если содержит HTML теги, заменяем только текстовые узлы
-                if (element.children.length === 0) {
-                    // Простой текстовый элемент
+
+            if (value !== undefined && value !== null) {
+                elements.forEach(element => {
                     element.textContent = value;
-                } else {
-                    // Элемент с вложенными тегами - заменяем только текстовые узлы
-                    const textNodes = [];
-                    const walker = document.createTreeWalker(
-                        element,
-                        NodeFilter.SHOW_TEXT,
-                        null,
-                        false
-                    );
-                    
-                    let node;
-                    while (node = walker.nextNode()) {
-                        if (node.nodeValue.trim()) {
-                            textNodes.push(node);
-                        }
-                    }
-                    
-                    if (textNodes.length > 0) {
-                        // Заменяем первый текстовый узел
-                        textNodes[0].nodeValue = value;
-                        // Очищаем остальные
-                        for (let i = 1; i < textNodes.length; i++) {
-                            textNodes[i].nodeValue = '';
-                        }
-                    } else {
-                        // Если нет текстовых узлов, добавляем текст в начало
-                        element.insertBefore(document.createTextNode(value), element.firstChild);
-                    }
-                }
-                
+                });
+
                 updatedCount++;
-                console.log(`✅ Обновлен элемент ${selector}: "${value}" (поле: ${fieldName})`);
-            });
+                console.log(`✅ Обновлен элемент ${selector}: "${value}"`);
+            } else {
+                console.log(`⚠️ Поле "${fieldName}" не найдено в данных пользователя`);
+            }
         });
-        
-        // Отчет о результатах
+
         if (updatedCount > 0) {
-            console.log(`???? Успешно обновлено ${updatedCount} элементов на странице`);
-            showSuccessIndicator(`Данные загружены (${updatedCount} элементов)`);
+            console.log(`🎉 Успешно обновлено ${updatedCount} элементов`);
         } else {
             console.log('❌ Не удалось обновить ни одного элемента');
-            showErrorIndicator('Не найдены элементы или данные для отображения');
         }
-        
-        if (notFoundElements.length > 0) {
-            console.log('???? Элементы не найдены для селекторов:', notFoundElements);
-        }
-        
-        if (notFoundFields.length > 0) {
-            console.log('???? Поля отсутствуют в данных:', notFoundFields);
-            console.log('???? Доступные поля:', Object.keys(user));
-        }
-        
+
         // Настраиваем автокопирование реферальной ссылки
         setupAutoCopyReferralLink();
     }
-    
-    // Функция для восстановления оригинального текста
-    function restoreOriginalText() {
-        Object.keys(USER_ELEMENTS).forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(element => {
-                if (element.dataset.originalHTML) {
-                    // Восстанавливаем полный HTML чтобы сохранить все стили
-                    element.innerHTML = element.dataset.originalHTML;
-                } else if (element.dataset.originalText) {
-                    // Если HTML не сохранен, восстанавливаем текст
-                    element.textContent = element.dataset.originalText;
-                }
-                // НЕ удаляем классы, так как мы их не добавляем
-                // element.classList.remove('user-data-loaded');
-            });
-        });
-    }
-    
-    // Функция для показа индикатора успеха
-    function showSuccessIndicator(message) {
-        showIndicator(message, 'success');
-    }
-    
-    // Функция для показа индикатора предупреждения
-    function showWarningIndicator(message) {
-        showIndicator(message, 'warning');
-    }
-    
-    // Функция для показа индикатора ошибки
-    function showErrorIndicator(message) {
-        showIndicator(message, 'error');
-    }
-    
-    // Универсальная функция для показа индикаторов
-    function showIndicator(message, type) {
-        const colors = {
-            success: '#4CAF50',
-            warning: '#ff9800',
-            error: '#f44336'
-        };
-        
-        const indicator = document.createElement('div');
-        indicator.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${colors[type] || '#2196F3'};
-            color: white;
-            padding: 15px 20px;
-            border-radius: 5px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            z-index: 10000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            max-width: 300px;
-            word-wrap: break-word;
-        `;
-        
-        indicator.textContent = message;
-        document.body.appendChild(indicator);
-        
-        // Убираем индикатор через 5 секунд
-        setTimeout(() => {
-            if (indicator.parentNode) {
-                indicator.parentNode.removeChild(indicator);
-            }
-        }, 5000);
-    }
-    
+
     // Основная функция инициализации
     async function initUserDisplay() {
-        console.log('???? Инициализация отображения данных пользователя...');
-        
-        // НЕ показываем индикатор загрузки, чтобы не менять стили
-        // const loadingElements = document.querySelectorAll(Object.keys(USER_ELEMENTS).join(', '));
-        // loadingElements.forEach(el => el.classList.add('user-data-loading'));
-        
+        console.log('🚀 Запуск системы отображения данных...');
+
         try {
-            // Получаем данные текущего пользователя
             const userData = await getCurrentUser();
-            
-            // НЕ убираем индикатор загрузки, так как мы его не добавляли
-            // loadingElements.forEach(el => el.classList.remove('user-data-loading'));
-            
-            if (userData && userData.success && userData.user) {
-                // Обновляем элементы на странице
+
+            if (userData && userData.success) {
+                console.log('✅ Данные получены успешно');
                 updateUserElements(userData);
-            } else if (userData && userData.success && !userData.user) {
-                console.log('ℹ️ Пользователь не авторизован или не найден в базе');
-                restoreOriginalText();
-                showWarningIndicator('Пользователь не авторизован');
             } else {
-                console.log('❌ Ошибка получения данных пользователя');
-                restoreOriginalText();
-                showErrorIndicator('Ошибка загрузки данных пользователя');
+                console.log('⚠️ Пользователь не авторизован или данные недоступны');
             }
+
         } catch (error) {
-            console.error('❌ Ошибка инициализации:', error);
-            // НЕ убираем классы, так как мы их не добавляли
-            // loadingElements.forEach(el => el.classList.remove('user-data-loading'));
-            restoreOriginalText();
-            showErrorIndicator('Ошибка соединения с сервером');
+            console.error('❌ Критическая ошибка:', error);
         }
     }
-    
-    // Функция для периодического обновления данных
-    function setupPeriodicUpdate() {
-        // Обновляем данные каждые 30 секунд
-        setInterval(async () => {
-            console.log('???? Периодическое обновление данных пользователя...');
-            
-            const userData = await getCurrentUser();
-            if (userData && userData.success && userData.user) {
-                updateUserElements(userData);
-            } else {
-                restoreOriginalText();
-            }
-        }, 30000); // 30 секунд
-    }
-    
-    // Функция для создания отладочной панели
-    function createDebugPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'user-display-debug';
-        panel.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            width: 350px;
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            z-index: 10000;
-            display: none;
-            max-height: 80vh;
-            overflow-y: auto;
-        `;
-        
-        panel.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <strong>???? User Display Debug</strong>
-                <button onclick="document.getElementById('user-display-debug').style.display='none'" 
-                        style="background: #f44336; color: white; border: none; border-radius: 3px; padding: 3px 8px; cursor: pointer;">✕</button>
-            </div>
-            <button onclick="window.refreshUserData()" 
-                    style="width: 100%; padding: 8px; margin: 5px 0; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ???? Обновить данные
-            </button>
-            <button onclick="window.testCurrentUser()" 
-                    style="width: 100%; padding: 8px; margin: 5px 0; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ???? Тест текущего пользователя
-            </button>
-            <button onclick="window.showUserElements()" 
-                    style="width: 100%; padding: 8px; margin: 5px 0; background: #ff9800; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ???? Показать элементы
-            </button>
-            <button onclick="window.showAllUserData()" 
-                    style="width: 100%; padding: 8px; margin: 5px 0; background: #9c27b0; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ???? Показать все данные пользователя
-            </button>
-            <button onclick="window.showAvailableFields()" 
-                    style="width: 100%; padding: 8px; margin: 5px 0; background: #607d8b; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ???? Доступные поля базы данных
-            </button>
-        `;
-        
-        document.body.appendChild(panel);
-        
-        // Показать панель при нажатии Ctrl+Shift+U
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.shiftKey && e.key === 'U') {
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            }
-        });
-    }
-    
-    // Глобальные функции для отладки
-    window.refreshUserData = function() {
-        console.log('???? Ручное обновление данных пользователя...');
+
+    // Запуск при загрузке страницы
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUserDisplay);
+    } else {
         initUserDisplay();
-    };
-    
-    window.testCurrentUser = async function() {
-        console.log('???? Тестирование получения текущего пользователя...');
-        const userData = await getCurrentUser();
-        console.log('Результат теста:', userData);
-        alert('Результат в консоли (F12)');
-    };
-    
-    window.showUserElements = function() {
-        console.log('???? Элементы для отображения данных пользователя:');
-        Object.keys(USER_ELEMENTS).forEach(selector => {
-            const fieldName = USER_ELEMENTS[selector];
-            const elements = document.querySelectorAll(selector);
-            console.log(`${selector} (поле: ${fieldName}): найдено ${elements.length} элементов`, elements);
-        });
-        alert('Информация об элементах в консоли (F12)');
-    };
-    
-    window.showAllUserData = function() {
-        console.log('???? ВСЕ ДАННЫЕ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ:');
-        if (currentUserData) {
-            console.log('Данные пользователя:', currentUserData);
-            console.log('Доступные поля:', Object.keys(currentUserData));
-            
-            // Показываем каждое поле отдельно
-            Object.keys(currentUserData).forEach(field => {
-                console.log(`  ${field}: ${currentUserData[field]}`);
-            });
-        } else {
-            console.log('❌ Данные пользователя не загружены');
-        }
-        alert('Все данные пользователя в консоли (F12)');
-    };
-    
-    window.showAvailableFields = function() {
-        console.log('???? ДОСТУПНЫЕ ПОЛЯ ИЗ БАЗЫ ДАННЫХ:');
-        if (currentUserData) {
-            const fields = Object.keys(currentUserData);
-            console.log('Всего полей:', fields.length);
-            console.log('Список полей:', fields);
-            
-            console.log('\n???? ПРИМЕРЫ ИСПОЛЬЗОВАНИЯ В USER_ELEMENTS:');
-            fields.forEach(field => {
-                console.log(`  '.my-element': '${field}',  // ${currentUserData[field]}`);
-            });
-        } else {
-            console.log('❌ Сначала загрузите данные пользователя');
-        }
-        alert('Доступные поля в консоли (F12)');
-    };
-    
-    // Инициализация при загрузке
-    function init() {
-        console.log('???? Запуск системы отображения данных пользователя');
-        console.log('⚙️ Настроенные элементы:', USER_ELEMENTS);
-        
-        createDebugPanel();
-        setupPeriodicUpdate();
-        
-        // Инициальная загрузка данных
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(initUserDisplay, 1000);
-            });
-        } else {
-            setTimeout(initUserDisplay, 1000);
-        }
-        
-        console.log('✅ Система инициализирована');
-        console.log('???? Для отладки нажмите Ctrl+Shift+U');
-        console.log('???? Настройте USER_ELEMENTS для ваших элементов');
     }
-    
-    // Запускаем
-    init();
-    
+
+    console.log('📋 Полная система отображения данных пользователя загружена');
 })();
 </script>
-
-<style>
-/* Убрали все стили для элементов, чтобы не влиять на Zero Block */
-
-/* Убрали стили .user-data-loaded чтобы не менять оформление Zero Block */
-
-/* Стили для отладочной панели */
-#user-display-debug {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    backdrop-filter: blur(10px);
-}
-
-#user-display-debug button:hover {
-    opacity: 0.8;
-}
-</style>
