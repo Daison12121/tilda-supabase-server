@@ -207,6 +207,7 @@
         const autoCopyElements = document.querySelectorAll('.auto-copy-referral, [data-auto-copy="referral"]');
         
         autoCopyElements.forEach(element => {
+            // НЕ меняем стили элемента, только добавляем курсор и подсказку
             element.style.cursor = 'pointer';
             element.title = 'Нажмите чтобы скопировать реферальную ссылку';
             
@@ -216,17 +217,15 @@
                 try {
                     await navigator.clipboard.writeText(currentUserData.referral_link);
                     
+                    // Сохраняем оригинальный текст
                     const originalText = element.textContent;
-                    const originalBg = element.style.backgroundColor;
                     
+                    // Показываем уведомление БЕЗ изменения стилей
                     element.textContent = '✅ Скопировано!';
-                    element.style.backgroundColor = '#4CAF50';
-                    element.style.color = 'white';
                     
+                    // Возвращаем оригинальный текст через 2 секунды
                     setTimeout(() => {
                         element.textContent = originalText;
-                        element.style.backgroundColor = originalBg;
-                        element.style.color = '';
                     }, 2000);
                     
                     console.log('✅ Реферальная ссылка скопирована:', currentUserData.referral_link);
