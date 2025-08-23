@@ -69,6 +69,26 @@
         // '.last-referral-amount': 'referral_transactions.0.amount',      // Сумма последней реферальной транзакции
         // '.last-referral-date': 'referral_transactions.0.transaction_date', // Дата последней реферальной транзакции
         
+        // === РЕФЕРАЛЫ ПО УРОВНЯМ (специальные функции) ===
+        // '.referral-1-name': 'referrals_level_1.first_name',     // Имя первого реферала 1 уровня (РЕАЛЬНОЕ ИМЯ!)
+        // '.referral-1-email': 'referrals_level_1.first_email',   // Email первого реферала 1 уровня
+        // '.referral-1-amount': 'referrals_level_1.first_amount', // Сумма от первого реферала 1 уровня
+        // '.referral-1-count': 'referrals_level_1.count',         // Количество рефералов 1 уровня
+        // '.referral-1-names': 'referrals_level_1.names',         // Все имена рефералов 1 уровня через запятую
+        // '.referral-1-all': 'referrals_level_1.all_names',       // Все рефералы с email: "Иван (ivan@mail.com), Петр (petr@mail.com)"
+        // '.referral-1-total': 'referrals_level_1.total_amount',  // Общая сумма от рефералов 1 уровня
+        
+        // '.referral-2-name': 'referrals_level_2.first_name',     // Имя первого реферала 2 уровня
+        // '.referral-2-count': 'referrals_level_2.count',         // Количество рефералов 2 уровня
+        // '.referral-3-name': 'referrals_level_3.first_name',     // Имя первого реферала 3 уровня
+        // '.referral-3-count': 'referrals_level_3.count',         // Количество рефералов 3 уровня
+        
+        // === АВТОКОПИРОВАНИЕ РЕФЕРАЛЬНОЙ ССЫЛКИ ===
+        // Добавьте класс 'auto-copy-referral' или атрибут data-auto-copy="referral" к любому элементу
+        // При клике на такой элемент реферальная ссылка автоматически скопируется в буфер обмена
+        // '.my-referral-link': 'referral_link',                   // Показать реферальную ссылку
+        // Пример: <div class="auto-copy-referral">Скопировать мою ссылку</div>
+        
         // === ПРИМЕРЫ РАЗНЫХ СЕЛЕКТОРОВ ===
         // '.profile .user-name': 'name',           // Вложенные элементы
         // '#user-balance': 'balance_kgs',          // По ID
@@ -82,10 +102,62 @@
     
     // Переменная для хранения всех данных пользователя
     let currentUserData = null;
+    let currentReferralsData = null;
     
     // Функция для получения вложенных значений (например, stats.total_courses, payments.0.amount)
     function getNestedValue(obj, path) {
         try {
+            // Специальные функции для рефералов по уровням
+            if (path.startsWith('referrals_level_')) {
+                const level = parseInt(path.split('_')[2]); // referrals_level_1 -> 1
+                const field = path.split('.')[1]; // referrals_level_1.name -> name
+                
+                // Сначала пробуем получить данные из currentReferralsData (реальные имена рефералов)
+                if (currentReferralsData && currentReferralsData.referrals) {
+                    const levelKey = `level_${level}`;
+                    const levelReferrals = currentReferralsData.referrals[levelKey];
+                    
+                    if (levelReferrals && levelReferrals.users && levelReferrals.users.length > 0) {
+                        if (field === 'count') return levelReferrals.count;
+                        if (field === 'names') return levelReferrals.users.map(ref => ref.name).join(', ');
+                        if (field === 'first_name') return levelReferrals.users[0].name;
+                        if (field === 'first_email') return levelReferrals.users[0].email;
+                        if (field === 'first_date') return levelReferrals.users[0].created_at;
+                        if (field === 'all_names') return levelReferrals.users.map(ref => `${ref.name} (${ref.email})`).join(', ');
+                    }
+                }
+                
+                // Fallback: пробуем получить данные из referral_history (транзакции)
+                if (obj.referral_history && Array.isArray(obj.referral_history)) {
+                    const levelReferrals = obj.referral_history.filter(ref => ref.level === level);
+                    if (levelReferrals.length > 0) {
+                        if (field === 'count') return levelReferrals.length;
+                        if (field === 'names') return levelReferrals.map(ref => ref.user_name).join(', ');
+                        if (field === 'first_name') return levelReferrals[0].user_name;
+                        if (field === 'first_email') return levelReferrals[0].user_email;
+                        if (field === 'first_amount') return levelReferrals[0].amount;
+                        if (field === 'first_date') return levelReferrals[0].transaction_date;
+                        if (field === 'total_amount') return levelReferrals.reduce((sum, ref) => sum + parseFloat(ref.amount || 0), 0);
+                    }
+                }
+                
+                // Fallback: используем основные поля из таблицы users
+                if (field === 'count') {
+                    const fieldName = `level_${level}_referrals`;
+                    return obj[fieldName] || 0;
+                }
+                
+                // Если нет детальных данных, но есть количество рефералов
+                const referralCount = obj[`level_${level}_referrals`] || 0;
+                if (referralCount > 0) {
+                    if (field === 'first_name') return `Реферал ${level} уровня (${referralCount})`;
+                    if (field === 'names') return `${referralCount} реферал(ов) ${level} уровня`;
+                    if (field === 'total_amount') return 'Данные загружаются...';
+                }
+                
+                return field === 'count' ? 0 : 'Нет рефералов';
+            }
+            
             return path.split('.').reduce((current, key) => {
                 if (current === null || current === undefined) {
                     return undefined;
@@ -106,6 +178,111 @@
         }
     }
     
+    // Функция для получения рефералов пользователя (реальные имена)
+    async function getUserReferrals(email) {
+        try {
+            console.log('👥 Запрашиваем рефералов для:', email);
+            
+            const response = await fetch(`${SERVER_URL}/get-user-referrals?email=${encodeURIComponent(email)}`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Рефералы получены:', data);
+            
+            if (data.success) {
+                currentReferralsData = data;
+                console.log('💾 Данные рефералов сохранены:', {
+                    level1: data.referrals.level_1.count,
+                    level2: data.referrals.level_2.count,
+                    level3: data.referrals.level_3.count
+                });
+                
+                // Выводим имена рефералов
+                if (data.referrals.level_1.users.length > 0) {
+                    console.log('👤 Рефералы 1 уровня:', data.referrals.level_1.users.map(u => u.name));
+                }
+                if (data.referrals.level_2.users.length > 0) {
+                    console.log('👤 Рефералы 2 уровня:', data.referrals.level_2.users.map(u => u.name));
+                }
+                if (data.referrals.level_3.users.length > 0) {
+                    console.log('👤 Рефералы 3 уровня:', data.referrals.level_3.users.map(u => u.name));
+                }
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Ошибка при получении рефералов:', error);
+            return null;
+        }
+    }
+    
+    // Функция для автокопирования реферальной ссылки
+    function setupAutoCopyReferralLink() {
+        if (!currentUserData || !currentUserData.referral_link) {
+            console.log('⚠️ Нет реферальной ссылки для копирования');
+            return;
+        }
+        
+        // Ищем элементы с классом для автокопирования
+        const autoCopyElements = document.querySelectorAll('.auto-copy-referral, [data-auto-copy="referral"]');
+        
+        autoCopyElements.forEach(element => {
+            element.style.cursor = 'pointer';
+            element.title = 'Нажмите чтобы скопировать реферальную ссылку';
+            
+            // Добавляем обработчик клика
+            element.addEventListener('click', async function(e) {
+                e.preventDefault();
+                
+                try {
+                    await navigator.clipboard.writeText(currentUserData.referral_link);
+                    
+                    // Показываем уведомление
+                    const originalText = element.textContent;
+                    element.textContent = '✅ Скопировано!';
+                    element.style.color = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        element.textContent = originalText;
+                        element.style.color = '';
+                    }, 2000);
+                    
+                    console.log('✅ Реферальная ссылка скопирована:', currentUserData.referral_link);
+                } catch (err) {
+                    console.error('❌ Ошибка копирования:', err);
+                    
+                    // Fallback для старых браузеров
+                    const textArea = document.createElement('textarea');
+                    textArea.value = currentUserData.referral_link;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    const originalText = element.textContent;
+                    element.textContent = '✅ Скопировано!';
+                    element.style.color = '#4CAF50';
+                    
+                    setTimeout(() => {
+                        element.textContent = originalText;
+                        element.style.color = '';
+                    }, 2000);
+                }
+            });
+        });
+        
+        console.log(`🔗 Настроено автокопирование для ${autoCopyElements.length} элементов`);
+    }
+
     // Функция для получения полных данных текущего авторизованного пользователя
     async function getCurrentUser() {
         try {
@@ -146,6 +323,11 @@
                 }
                 if (currentUserData.referral_history && currentUserData.referral_history.length > 0) {
                     console.log('📜 История рефералов:', currentUserData.referral_history.length);
+                }
+                
+                // Получаем реальные данные рефералов (имена)
+                if (currentUserData.email) {
+                    getUserReferrals(currentUserData.email);
                 }
             }
             
@@ -260,6 +442,9 @@
             console.log('📊 Поля отсутствуют в данных:', notFoundFields);
             console.log('💡 Доступные поля:', Object.keys(user));
         }
+        
+        // Настраиваем автокопирование реферальной ссылки
+        setupAutoCopyReferralLink();
     }
     
     // Функция для восстановления оригинального текста

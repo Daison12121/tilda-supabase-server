@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест рефералов kuvaldakg777@gmail.com</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-block { 
+            border: 2px solid #2196F3; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .referral-info { 
+            font-size: 16px; 
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .debug { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            border-radius: 4px; 
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест рефералов для kuvaldakg777@gmail.com</h1>
+    
+    <div class="test-block" id="rec1234567890">
+        <h3>📊 Информация о рефералах</h3>
+        
+        <div class="referral-info">
+            <strong>Количество рефералов 1 уровня:</strong>
+            <span class="referral-1-count">Загрузка...</span>
+        </div>
+        
+        <div class="referral-info">
+            <strong>Имя первого реферала 1 уровня:</strong>
+            <span class="referral-1-name">Загрузка...</span>
+        </div>
+        
+        <div class="referral-info">
+            <strong>Все рефералы 1 уровня:</strong>
+            <span class="referral-1-names">Загрузка...</span>
+        </div>
+        
+        <div class="referral-info">
+            <strong>Количество рефералов 2 уровня:</strong>
+            <span class="referral-2-count">Загрузка...</span>
+        </div>
+        
+        <div class="referral-info">
+            <strong>Количество рефералов 3 уровня:</strong>
+            <span class="referral-3-count">Загрузка...</span>
+        </div>
+    </div>
+    
+    <button onclick="loadData()">🔄 Загрузить данные</button>
+    <button onclick="showDebug()">🔍 Показать отладку</button>
+    
+    <div id="debug"></div>
+
+    <script>
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+        const TEST_EMAIL = 'kuvaldakg777@gmail.com';
+        
+        // Настройка элементов (как в user-display.html)
+        const USER_ELEMENTS = {
+            '#rec1234567890 .referral-1-count': 'referrals_level_1.count',
+            '#rec1234567890 .referral-1-name': 'referrals_level_1.first_name',
+            '#rec1234567890 .referral-1-names': 'referrals_level_1.names',
+            '#rec1234567890 .referral-2-count': 'referrals_level_2.count',
+            '#rec1234567890 .referral-3-count': 'referrals_level_3.count',
+        };
+        
+        let currentUserData = null;
+        
+        // Функция для получения вложенных значений (обновленная версия)
+        function getNestedValue(obj, path) {
+            try {
+                console.log('🔍 getNestedValue:', { path, hasReferralHistory: !!obj.referral_history });
+                
+                // Специальные функции для рефералов по уровням
+                if (path.startsWith('referrals_level_')) {
+                    const level = parseInt(path.split('_')[2]); // referrals_level_1 -> 1
+                    const field = path.split('.')[1]; // referrals_level_1.name -> name
+                    
+                    console.log('🎯 Обрабатываем referrals_level_:', { level, field });
+                    
+                    // Сначала пробуем получить данные из referral_history
+                    if (obj.referral_history && Array.isArray(obj.referral_history)) {
+                        const levelReferrals = obj.referral_history.filter(ref => ref.level === level);
+                        console.log(`📜 Рефералы ${level} уровня из referral_history:`, levelReferrals);
+                        
+                        if (levelReferrals.length > 0) {
+                            if (field === 'count') return levelReferrals.length;
+                            if (field === 'names') return levelReferrals.map(ref => ref.user_name).join(', ');
+                            if (field === 'first_name') return levelReferrals[0].user_name;
+                            if (field === 'first_email') return levelReferrals[0].user_email;
+                            if (field === 'first_amount') return levelReferrals[0].amount;
+                            if (field === 'first_date') return levelReferrals[0].transaction_date;
+                            if (field === 'total_amount') return levelReferrals.reduce((sum, ref) => sum + parseFloat(ref.amount || 0), 0);
+                        }
+                    }
+                    
+                    // Fallback: используем основные поля из таблицы users
+                    if (field === 'count') {
+                        const fieldName = `level_${level}_referrals`;
+                        const count = obj[fieldName] || 0;
+                        console.log(`📊 Fallback count для ${fieldName}:`, count);
+                        return count;
+                    }
+                    
+                    // Если нет детальных данных, но есть количество рефералов
+                    const referralCount = obj[`level_${level}_referrals`] || 0;
+                    console.log(`📊 Количество рефералов ${level} уровня:`, referralCount);
+                    
+                    if (referralCount > 0) {
+                        if (field === 'first_name') return `Реферал ${level} уровня (${referralCount})`;
+                        if (field === 'names') return `${referralCount} реферал(ов) ${level} уровня`;
+                        if (field === 'total_amount') return 'Данные загружаются...';
+                    }
+                    
+                    const result = field === 'count' ? 0 : 'Нет рефералов';
+                    console.log('📤 Возвращаем результат:', result);
+                    return result;
+                }
+                
+                return path.split('.').reduce((current, key) => {
+                    if (current === null || current === undefined) {
+                        return undefined;
+                    }
+                    
+                    if (!isNaN(key) && Array.isArray(current)) {
+                        const index = parseInt(key);
+                        return current[index];
+                    }
+                    
+                    return current[key];
+                }, obj);
+            } catch (error) {
+                console.warn(`⚠️ Ошибка получения значения для пути "${path}":`, error);
+                return undefined;
+            }
+        }
+        
+        async function loadData() {
+            try {
+                console.log('🔄 Загружаем данные для:', TEST_EMAIL);
+                
+                const response = await fetch(`${SERVER_URL}/user-full-data?email=${encodeURIComponent(TEST_EMAIL)}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Данные получены:', data);
+                
+                if (!data.success || !data.user) {
+                    console.error('❌ Нет данных пользователя');
+                    return;
+                }
+                
+                currentUserData = data.user;
+                
+                // Обновляем элементы
+                Object.keys(USER_ELEMENTS).forEach(selector => {
+                    const fieldName = USER_ELEMENTS[selector];
+                    const elements = document.querySelectorAll(selector);
+                    
+                    if (elements.length === 0) {
+                        console.log(`⚠️ Элемент не найден: ${selector}`);
+                        return;
+                    }
+                    
+                    const value = getNestedValue(currentUserData, fieldName);
+                    console.log(`📝 Обновляем ${selector} значением:`, value);
+                    
+                    elements.forEach(element => {
+                        element.textContent = value || 'Нет данных';
+                    });
+                });
+                
+            } catch (error) {
+                console.error('❌ Ошибка:', error);
+            }
+        }
+        
+        function showDebug() {
+            if (!currentUserData) {
+                document.getElementById('debug').innerHTML = '<p>Сначала загрузите данные</p>';
+                return;
+            }
+            
+            let html = '<div class="debug">';
+            html += '<h3>🔍 Отладочная информация</h3>';
+            html += `<p><strong>Email:</strong> ${currentUserData.email}</p>`;
+            html += `<p><strong>Имя:</strong> ${currentUserData.name}</p>`;
+            html += `<p><strong>level_1_referrals:</strong> ${currentUserData.level_1_referrals}</p>`;
+            html += `<p><strong>level_2_referrals:</strong> ${currentUserData.level_2_referrals}</p>`;
+            html += `<p><strong>level_3_referrals:</strong> ${currentUserData.level_3_referrals}</p>`;
+            html += `<p><strong>referral_history.length:</strong> ${currentUserData.referral_history?.length || 0}</p>`;
+            html += `<p><strong>referral_transactions.length:</strong> ${currentUserData.referral_transactions?.length || 0}</p>`;
+            
+            html += '<h4>🧪 Тест функций:</h4>';
+            html += `<p><strong>referrals_level_1.count:</strong> ${getNestedValue(currentUserData, 'referrals_level_1.count')}</p>`;
+            html += `<p><strong>referrals_level_1.first_name:</strong> ${getNestedValue(currentUserData, 'referrals_level_1.first_name')}</p>`;
+            html += `<p><strong>referrals_level_1.names:</strong> ${getNestedValue(currentUserData, 'referrals_level_1.names')}</p>`;
+            
+            html += '</div>';
+            
+            document.getElementById('debug').innerHTML = html;
+        }
+        
+        // Автоматически загружаем данные при открытии страницы
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>

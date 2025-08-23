@@ -399,6 +399,149 @@ app.get("/user-full-data", async (req, res) => {
   }
 });
 
+// Получить рефералов пользователя (имена тех кто зарегистрировался по его ссылке)
+app.get("/get-user-referrals", async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Email обязателен" 
+      });
+    }
+
+    console.log('🔍 Получаем рефералов для пользователя:', email);
+
+    // 1. Получаем данные пользователя
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
+
+    if (userError || !userData) {
+      console.error('❌ Пользователь не найден:', userError);
+      return res.status(404).json({ 
+        success: false, 
+        error: "Пользователь не найден" 
+      });
+    }
+
+    console.log('✅ Пользователь найден:', userData.email, 'Реферальный код:', userData.referral_code);
+
+    // 2. Ищем всех пользователей которые зарегистрировались по его реферальному коду
+    const { data: referrals, error: referralsError } = await supabase
+      .from("users")
+      .select("id, name, email, created_at, referral_code, level_1_referrals, level_2_referrals, level_3_referrals")
+      .eq("referred_by", userData.referral_code)
+      .order("created_at", { ascending: false });
+
+    if (referralsError) {
+      console.error('❌ Ошибка получения рефералов:', referralsError);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Ошибка получения рефералов" 
+      });
+    }
+
+    console.log('📊 Найдено рефералов:', referrals?.length || 0);
+
+    // 3. Группируем рефералов по уровням
+    const level1Referrals = referrals || [];
+    
+    // Для 2 и 3 уровня нужно искать рефералов рефералов
+    let level2Referrals = [];
+    let level3Referrals = [];
+    
+    if (level1Referrals.length > 0) {
+      // Получаем рефералов 2 уровня (рефералы рефералов 1 уровня)
+      const level1Codes = level1Referrals.map(ref => ref.referral_code).filter(Boolean);
+      
+      if (level1Codes.length > 0) {
+        const { data: level2Data } = await supabase
+          .from("users")
+          .select("id, name, email, created_at, referral_code, referred_by")
+          .in("referred_by", level1Codes)
+          .order("created_at", { ascending: false });
+        
+        level2Referrals = level2Data || [];
+        
+        // Получаем рефералов 3 уровня
+        if (level2Referrals.length > 0) {
+          const level2Codes = level2Referrals.map(ref => ref.referral_code).filter(Boolean);
+          
+          if (level2Codes.length > 0) {
+            const { data: level3Data } = await supabase
+              .from("users")
+              .select("id, name, email, created_at, referral_code, referred_by")
+              .in("referred_by", level2Codes)
+              .order("created_at", { ascending: false });
+            
+            level3Referrals = level3Data || [];
+          }
+        }
+      }
+    }
+
+    const result = {
+      success: true,
+      user: {
+        email: userData.email,
+        name: userData.name,
+        referral_code: userData.referral_code,
+        referral_link: userData.referral_link
+      },
+      referrals: {
+        level_1: {
+          count: level1Referrals.length,
+          users: level1Referrals.map(ref => ({
+            name: ref.name,
+            email: ref.email,
+            created_at: ref.created_at,
+            level: 1
+          }))
+        },
+        level_2: {
+          count: level2Referrals.length,
+          users: level2Referrals.map(ref => ({
+            name: ref.name,
+            email: ref.email,
+            created_at: ref.created_at,
+            level: 2
+          }))
+        },
+        level_3: {
+          count: level3Referrals.length,
+          users: level3Referrals.map(ref => ({
+            name: ref.name,
+            email: ref.email,
+            created_at: ref.created_at,
+            level: 3
+          }))
+        }
+      },
+      message: "Referrals retrieved successfully"
+    };
+
+    console.log('🎉 Рефералы получены:', {
+      level1: result.referrals.level_1.count,
+      level2: result.referrals.level_2.count,
+      level3: result.referrals.level_3.count
+    });
+
+    res.json(result);
+
+  } catch (err) {
+    console.error('❌ Ошибка в /get-user-referrals:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message,
+      details: "Failed to get user referrals"
+    });
+  }
+});
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("🚀 Server запущен на порту " + (process.env.PORT || 3000));
 });
