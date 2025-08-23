@@ -22,7 +22,7 @@ app.use(cors({
   ],
   methods: ["GET", "POST", "OPTIONS"],
   credentials: true, // Включаем поддержку куков
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Browser-ID"]
 }));
 
 // Настройка куков и сессий
@@ -106,7 +106,7 @@ app.post("/auth-sync", async (req, res) => {
     console.log('🆔 Browser ID from body:', req.body.browser_id);
     
     const { email, action, timestamp, source, page, browser_id } = req.body;
-    const browserId = browser_id || req.headers['x-browser-id'] || req.sessionID;
+    const browserId = browser_id || req.sessionID;
     
     if (!email) {
       return res.status(400).json({ 
@@ -300,7 +300,7 @@ app.get("/user-full-data", async (req, res) => {
     console.log('🆔 Browser ID from header:', req.headers['x-browser-id']);
     
     // Получаем Browser ID и email
-    const browserId = req.query.browser_id || req.headers['x-browser-id'] || req.sessionID;
+    const browserId = req.query.browser_id || req.sessionID;
     let email = req.query.email;
     let emailSource = 'query';
     
