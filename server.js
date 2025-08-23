@@ -102,8 +102,11 @@ app.post("/auth-sync", async (req, res) => {
     console.log('POST /auth-sync запрос:', req.body);
     console.log('🍪 Session ID:', req.sessionID);
     console.log('🍪 Session data before:', req.session);
+    console.log('🆔 Browser ID from header:', req.headers['x-browser-id']);
+    console.log('🆔 Browser ID from body:', req.body.browser_id);
     
-    const { email, action, timestamp, source, page } = req.body;
+    const { email, action, timestamp, source, page, browser_id } = req.body;
+    const browserId = browser_id || req.headers['x-browser-id'] || req.sessionID;
     
     if (!email) {
       return res.status(400).json({ 
@@ -112,17 +115,33 @@ app.post("/auth-sync", async (req, res) => {
       });
     }
 
-    console.log(`🔐 Синхронизация авторизации: ${email} (${action})`);
+    console.log(`🔐 Синхронизация авторизации: ${email} (${action}) [${browserId}]`);
 
     // Сохраняем информацию об авторизации в сессии пользователя
     req.session.userEmail = email;
     req.session.userAction = action;
+    req.session.browserId = browserId;
     req.session.loginTimestamp = timestamp || new Date().toISOString();
     req.session.source = source || 'unknown';
     req.session.page = page || 'unknown';
     req.session.lastActivity = new Date().toISOString();
 
-    // Также сохраняем в глобальной памяти для совместимости
+    // Сохраняем в глобальной памяти с Browser ID как ключом
+    if (!global.browserSessions) {
+      global.browserSessions = new Map();
+    }
+    
+    global.browserSessions.set(browserId, {
+      email,
+      action,
+      browserId,
+      timestamp: timestamp || new Date().toISOString(),
+      source: source || 'unknown',
+      page: page || 'unknown',
+      lastActivity: new Date().toISOString()
+    });
+
+    // Также сохраняем в старом формате для совместимости
     if (!global.authSessions) {
       global.authSessions = new Map();
     }
@@ -277,16 +296,24 @@ app.get("/user-full-data", async (req, res) => {
     console.log('🍪 Session data:', req.session);
     console.log('🍪 Cookies:', req.cookies);
     console.log('📧 Query email:', req.query.email);
+    console.log('🆔 Browser ID from query:', req.query.browser_id);
+    console.log('🆔 Browser ID from header:', req.headers['x-browser-id']);
     
-    // Получаем email из параметров или из сессии текущего пользователя
+    // Получаем Browser ID и email
+    const browserId = req.query.browser_id || req.headers['x-browser-id'] || req.sessionID;
     let email = req.query.email;
     let emailSource = 'query';
     
     if (email) {
       console.log('📧 Email взят из параметров запроса:', email);
     } else {
-      // Если email не передан, берем из сессии текущего пользователя
-      if (req.session && req.session.userEmail) {
+      // Если email не передан, ищем по Browser ID
+      if (global.browserSessions && global.browserSessions.has(browserId)) {
+        const browserSession = global.browserSessions.get(browserId);
+        email = browserSession.email;
+        emailSource = 'browser_session';
+        console.log('📧 Email взят из Browser Session:', email, '[', browserId, ']');
+      } else if (req.session && req.session.userEmail) {
         email = req.session.userEmail;
         emailSource = 'session';
         console.log('📧 Email взят из сессии пользователя:', email);
@@ -321,6 +348,7 @@ app.get("/user-full-data", async (req, res) => {
         }
         
         email = latestSession.email;
+        emailSource = 'global_fallback';
         console.log('📧 Email взят из глобальной сессии (fallback):', email);
       }
     }
@@ -439,8 +467,10 @@ app.get("/user-full-data", async (req, res) => {
       debug: {
         emailSource: emailSource,
         requestedEmail: email,
+        browserId: browserId,
         sessionId: req.sessionID,
-        hasSession: !!req.session.userEmail
+        hasSession: !!req.session.userEmail,
+        hasBrowserSession: !!(global.browserSessions && global.browserSessions.has(browserId))
       }
     });
 

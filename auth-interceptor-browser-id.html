@@ -1,0 +1,250 @@
+<!-- 
+ПЕРЕХВАТЧИК АВТОРИЗАЦИИ TILDA С BROWSER ID
+Отслеживает авторизацию пользователей и отправляет данные на сервер с уникальным ID браузера
+-->
+
+<script>
+(function() {
+    'use strict';
+    
+    const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+    
+    console.log('🔐 Инициализация перехватчика авторизации Tilda с Browser ID...');
+    
+    // Функция для генерации уникального ID браузера
+    function getBrowserId() {
+        let id = localStorage.getItem('tilda_browser_id');
+        if (!id) {
+            id = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('tilda_browser_id', id);
+            console.log('🆔 Создан новый Browser ID:', id);
+        } else {
+            console.log('🆔 Используется существующий Browser ID:', id);
+        }
+        return id;
+    }
+    
+    const browserId = getBrowserId();
+    
+    // Функция для отправки данных авторизации на сервер
+    async function sendAuthData(email, action = 'login') {
+        try {
+            console.log(`📤 Отправляем данные авторизации: ${email} (${action}) [${browserId}]`);
+            
+            const response = await fetch(`${SERVER_URL}/auth-sync`, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Browser-ID': browserId
+                },
+                body: JSON.stringify({
+                    email: email,
+                    action: action,
+                    timestamp: new Date().toISOString(),
+                    source: 'tilda',
+                    page: window.location.href,
+                    browser_id: browserId
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('✅ Данные авторизации отправлены:', data);
+            
+            // Сохраняем в localStorage для других страниц
+            localStorage.setItem('tilda_auth_user', email);
+            localStorage.setItem('tilda_auth_timestamp', new Date().toISOString());
+            localStorage.setItem('tilda_browser_id', browserId);
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Ошибка отправки данных авторизации:', error);
+            return null;
+        }
+    }
+    
+    // Функция для перехвата отправки форм
+    function interceptForms() {
+        console.log('🎯 Настраиваем перехват форм...');
+        
+        // Находим все формы на странице
+        const forms = document.querySelectorAll('form');
+        
+        forms.forEach((form, index) => {
+            console.log(`📋 Найдена форма ${index + 1}:`, form);
+            
+            // Добавляем обработчик на отправку формы
+            form.addEventListener('submit', function(event) {
+                console.log('📤 Перехвачена отправка формы:', form);
+                
+                // Ищем поле email в форме
+                const emailField = form.querySelector('input[type="email"], input[name*="email"], input[id*="email"]');
+                
+                if (emailField && emailField.value) {
+                    const email = emailField.value.trim();
+                    console.log('📧 Найден email в форме:', email);
+                    
+                    // Отправляем данные на сервер (не блокируем отправку формы)
+                    sendAuthData(email, 'login');
+                } else {
+                    console.log('⚠️ Email не найден в форме');
+                }
+            });
+        });
+        
+        // Также отслеживаем динамически добавленные формы
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Проверяем, является ли добавленный элемент формой
+                        if (node.tagName === 'FORM') {
+                            console.log('📋 Найдена динамически добавленная форма:', node);
+                            
+                            node.addEventListener('submit', function(event) {
+                                console.log('📤 Перехвачена отправка динамической формы:', node);
+                                
+                                const emailField = node.querySelector('input[type="email"], input[name*="email"], input[id*="email"]');
+                                
+                                if (emailField && emailField.value) {
+                                    const email = emailField.value.trim();
+                                    console.log('📧 Найден email в динамической форме:', email);
+                                    
+                                    sendAuthData(email, 'login');
+                                }
+                            });
+                        }
+                        
+                        // Проверяем, содержит ли добавленный элемент формы
+                        const nestedForms = node.querySelectorAll ? node.querySelectorAll('form') : [];
+                        nestedForms.forEach(function(nestedForm) {
+                            console.log('📋 Найдена вложенная динамическая форма:', nestedForm);
+                            
+                            nestedForm.addEventListener('submit', function(event) {
+                                console.log('📤 Перехвачена отправка вложенной динамической формы:', nestedForm);
+                                
+                                const emailField = nestedForm.querySelector('input[type="email"], input[name*="email"], input[id*="email"]');
+                                
+                                if (emailField && emailField.value) {
+                                    const email = emailField.value.trim();
+                                    console.log('📧 Найден email в вложенной динамической форме:', email);
+                                    
+                                    sendAuthData(email, 'login');
+                                }
+                            });
+                        });
+                    }
+                });
+            });
+        });
+        
+        // Начинаем наблюдение за изменениями в DOM
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        console.log(`✅ Настроен перехват для ${forms.length} существующих форм + динамические формы`);
+    }
+    
+    // Функция для отслеживания изменений URL (для SPA)
+    function trackUrlChanges() {
+        let currentUrl = window.location.href;
+        
+        // Отслеживаем изменения через History API
+        const originalPushState = history.pushState;
+        const originalReplaceState = history.replaceState;
+        
+        history.pushState = function() {
+            originalPushState.apply(history, arguments);
+            setTimeout(() => {
+                if (window.location.href !== currentUrl) {
+                    currentUrl = window.location.href;
+                    console.log('🔄 URL изменился (pushState):', currentUrl);
+                    // Переинициализируем перехват форм для новой страницы
+                    setTimeout(interceptForms, 1000);
+                }
+            }, 100);
+        };
+        
+        history.replaceState = function() {
+            originalReplaceState.apply(history, arguments);
+            setTimeout(() => {
+                if (window.location.href !== currentUrl) {
+                    currentUrl = window.location.href;
+                    console.log('🔄 URL изменился (replaceState):', currentUrl);
+                    setTimeout(interceptForms, 1000);
+                }
+            }, 100);
+        };
+        
+        // Отслеживаем события popstate (кнопки назад/вперед)
+        window.addEventListener('popstate', function() {
+            setTimeout(() => {
+                if (window.location.href !== currentUrl) {
+                    currentUrl = window.location.href;
+                    console.log('🔄 URL изменился (popstate):', currentUrl);
+                    setTimeout(interceptForms, 1000);
+                }
+            }, 100);
+        });
+    }
+    
+    // Функция для проверки существующей авторизации
+    function checkExistingAuth() {
+        const storedEmail = localStorage.getItem('tilda_auth_user');
+        const storedTimestamp = localStorage.getItem('tilda_auth_timestamp');
+        
+        if (storedEmail && storedTimestamp) {
+            const authTime = new Date(storedTimestamp);
+            const now = new Date();
+            const hoursDiff = (now - authTime) / (1000 * 60 * 60);
+            
+            if (hoursDiff < 24) { // Авторизация действительна 24 часа
+                console.log('✅ Найдена существующая авторизация:', storedEmail);
+                sendAuthData(storedEmail, 'existing_session');
+            } else {
+                console.log('⏰ Существующая авторизация устарела');
+                localStorage.removeItem('tilda_auth_user');
+                localStorage.removeItem('tilda_auth_timestamp');
+            }
+        }
+    }
+    
+    // Инициализация
+    function init() {
+        console.log('🚀 Запуск перехватчика авторизации...');
+        
+        // Проверяем существующую авторизацию
+        checkExistingAuth();
+        
+        // Настраиваем перехват форм
+        interceptForms();
+        
+        // Отслеживаем изменения URL
+        trackUrlChanges();
+        
+        // Переинициализируем через некоторое время для динамического контента
+        setTimeout(() => {
+            console.log('🔄 Переинициализация перехватчика...');
+            interceptForms();
+        }, 3000);
+        
+        console.log('✅ Перехватчик авторизации активен');
+    }
+    
+    // Запуск при загрузке страницы
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    console.log('📋 Перехватчик авторизации Tilda с Browser ID загружен');
+})();
+</script>
