@@ -146,6 +146,7 @@
             const response = await fetch(`${SERVER_URL}/get-user-referrals?email=${encodeURIComponent(email)}`, {
                 method: 'GET',
                 mode: 'cors',
+                credentials: 'include', // Включаем отправку куков
                 headers: {
                     'Content-Type': 'application/json',
                 }
@@ -218,6 +219,7 @@
             const response = await fetch(`${SERVER_URL}/user-full-data`, {
                 method: 'GET',
                 mode: 'cors',
+                credentials: 'include', // Включаем отправку куков
                 headers: {
                     'Content-Type': 'application/json',
                 }

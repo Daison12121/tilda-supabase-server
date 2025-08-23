@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import session from "express-session";
+import cookieParser from "cookie-parser";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
@@ -7,12 +9,33 @@ dotenv.config();
 
 const app = express();
 
-// Упрощенные CORS настройки для тестирования
+// Настройка CORS с поддержкой credentials
 app.use(cors({
-  origin: '*', // Разрешаем все домены
+  origin: [
+    'https://aida.kg', 
+    'https://www.aida.kg',
+    'https://aida-kg.tilda.ws',
+    'https://tilda.cc',
+    'https://project7777777.tilda.ws',
+    'http://localhost:3000', 
+    'http://127.0.0.1:3000'
+  ],
   methods: ["GET", "POST", "OPTIONS"],
-  credentials: false,
+  credentials: true, // Включаем поддержку куков
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
+
+// Настройка куков и сессий
+app.use(cookieParser());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'tilda-supabase-secret-key-2024',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // В продакшене должно быть true для HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 часа
+  }
 }));
 
 app.use(express.json());
@@ -89,7 +112,15 @@ app.post("/auth-sync", async (req, res) => {
 
     console.log(`🔐 Синхронизация авторизации: ${email} (${action})`);
 
-    // Сохраняем информацию об авторизации в памяти сервера
+    // Сохраняем информацию об авторизации в сессии пользователя
+    req.session.userEmail = email;
+    req.session.userAction = action;
+    req.session.loginTimestamp = timestamp || new Date().toISOString();
+    req.session.source = source || 'unknown';
+    req.session.page = page || 'unknown';
+    req.session.lastActivity = new Date().toISOString();
+
+    // Также сохраняем в глобальной памяти для совместимости
     if (!global.authSessions) {
       global.authSessions = new Map();
     }
@@ -103,7 +134,7 @@ app.post("/auth-sync", async (req, res) => {
       lastActivity: new Date().toISOString()
     });
 
-    console.log('✅ Сессия авторизации сохранена:', email);
+    console.log('✅ Сессия авторизации сохранена в session и global:', email);
     
     // Получаем данные пользователя из Supabase
     const { data: userData, error } = await supabase
@@ -240,40 +271,47 @@ app.get("/user-full-data", async (req, res) => {
   try {
     console.log('GET /user-full-data запрос');
     
-    // Получаем email из параметров или из активной сессии
+    // Получаем email из параметров или из сессии текущего пользователя
     let email = req.query.email;
     
     if (!email) {
-      // Если email не передан, ищем в активных сессиях
-      if (!global.authSessions) {
-        return res.json({ 
-          success: true, 
-          user: null,
-          message: "No email provided and no active sessions"
-        });
-      }
-
-      // Находим последнюю активную сессию
-      let latestSession = null;
-      let latestTime = 0;
-      
-      for (const [sessionEmail, session] of global.authSessions.entries()) {
-        const sessionTime = new Date(session.timestamp).getTime();
-        if (sessionTime > latestTime) {
-          latestTime = sessionTime;
-          latestSession = session;
+      // Если email не передан, берем из сессии текущего пользователя
+      if (req.session && req.session.userEmail) {
+        email = req.session.userEmail;
+        console.log('📧 Email взят из сессии пользователя:', email);
+      } else {
+        // Fallback: ищем в глобальных сессиях (старый способ)
+        if (!global.authSessions) {
+          return res.json({ 
+            success: true, 
+            user: null,
+            message: "No email provided and no active sessions"
+          });
         }
-      }
 
-      if (!latestSession) {
-        return res.json({ 
-          success: true, 
-          user: null,
-          message: "No active sessions found"
-        });
+        // Находим последнюю активную сессию
+        let latestSession = null;
+        let latestTime = 0;
+        
+        for (const [sessionEmail, session] of global.authSessions.entries()) {
+          const sessionTime = new Date(session.timestamp).getTime();
+          if (sessionTime > latestTime) {
+            latestTime = sessionTime;
+            latestSession = session;
+          }
+        }
+
+        if (!latestSession) {
+          return res.json({ 
+            success: true, 
+            user: null,
+            message: "No active sessions found"
+          });
+        }
+        
+        email = latestSession.email;
+        console.log('📧 Email взят из глобальной сессии (fallback):', email);
       }
-      
-      email = latestSession.email;
     }
 
     console.log('🔍 Получаем полные данные для пользователя:', email);

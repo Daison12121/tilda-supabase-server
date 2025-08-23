@@ -19,6 +19,7 @@
             const response = await fetch(`${SERVER_URL}/auth-sync`, {
                 method: 'POST',
                 mode: 'cors',
+                credentials: 'include', // Включаем отправку куков
                 headers: {
                     'Content-Type': 'application/json',
                 },
