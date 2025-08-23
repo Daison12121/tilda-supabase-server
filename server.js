@@ -627,6 +627,36 @@ app.get("/get-user-referrals", async (req, res) => {
   }
 });
 
+// DEBUG endpoint для проверки сессий
+app.get("/debug-sessions", (req, res) => {
+  try {
+    const browserId = req.query.browser_id;
+    
+    const debugInfo = {
+      requestedBrowserId: browserId,
+      sessionId: req.sessionID,
+      sessionData: req.session,
+      browserSessions: global.browserSessions ? Object.fromEntries(global.browserSessions) : {},
+      authSessions: global.authSessions ? Object.fromEntries(global.authSessions) : {},
+      hasBrowserSession: !!(global.browserSessions && browserId && global.browserSessions.has(browserId)),
+      browserSessionData: (global.browserSessions && browserId && global.browserSessions.has(browserId)) 
+        ? global.browserSessions.get(browserId) 
+        : null
+    };
+    
+    res.json({
+      success: true,
+      debug: debugInfo
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("🚀 Server запущен на порту " + (process.env.PORT || 3000));
 });

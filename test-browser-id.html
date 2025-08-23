@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест Browser ID</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { 
+            background: #f0f0f0; 
+            padding: 15px; 
+            margin: 15px 0; 
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .result {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .browser-id {
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест Browser ID System</h1>
+    
+    <div class="test-section">
+        <h3>🆔 Ваш Browser ID:</h3>
+        <div id="browserIdDisplay" class="browser-id">Загружается...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>1. Авторизация пользователя</h3>
+        <input type="email" id="testEmail" placeholder="Введите email" value="numisushi@gmail.com">
+        <button onclick="testAuth()">🔐 Авторизоваться</button>
+        <div id="authResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Получение данных пользователя</h3>
+        <button onclick="testUserData()">👤 Получить данные</button>
+        <div id="userResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Проверка Browser Sessions</h3>
+        <button onclick="testBrowserSessions()">🔍 Проверить сессии</button>
+        <div id="sessionsResult" class="result"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+        let browserId = null;
+
+        // Функция для генерации уникального ID браузера
+        function getBrowserId() {
+            let id = localStorage.getItem('tilda_browser_id');
+            if (!id) {
+                id = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('tilda_browser_id', id);
+                console.log('🆔 Создан новый Browser ID:', id);
+            } else {
+                console.log('🆔 Используется существующий Browser ID:', id);
+            }
+            return id;
+        }
+
+        // Инициализация
+        function init() {
+            browserId = getBrowserId();
+            document.getElementById('browserIdDisplay').textContent = browserId;
+        }
+
+        async function testAuth() {
+            const email = document.getElementById('testEmail').value;
+            const resultDiv = document.getElementById('authResult');
+            
+            if (!email) {
+                resultDiv.textContent = 'Введите email!';
+                return;
+            }
+            
+            try {
+                resultDiv.textContent = 'Отправляем запрос авторизации...';
+                
+                const response = await fetch(`${SERVER_URL}/auth-sync`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        action: 'login',
+                        timestamp: new Date().toISOString(),
+                        source: 'test',
+                        page: window.location.href,
+                        browser_id: browserId
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Сохраняем в localStorage
+                localStorage.setItem('tilda_auth_user', email);
+                
+            } catch (error) {
+                resultDiv.textContent = 'Ошибка: ' + error.message;
+            }
+        }
+
+        async function testUserData() {
+            const resultDiv = document.getElementById('userResult');
+            
+            try {
+                resultDiv.textContent = 'Получаем данные пользователя...';
+                
+                const storedEmail = localStorage.getItem('tilda_auth_user');
+                let url = `${SERVER_URL}/user-full-data?browser_id=${browserId}`;
+                if (storedEmail) {
+                    url += `&email=${encodeURIComponent(storedEmail)}`;
+                }
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultDiv.textContent = 'Ошибка: ' + error.message;
+            }
+        }
+
+        async function testBrowserSessions() {
+            const resultDiv = document.getElementById('sessionsResult');
+            
+            try {
+                resultDiv.textContent = 'Проверяем Browser Sessions...';
+                
+                const response = await fetch(`${SERVER_URL}/debug-sessions?browser_id=${browserId}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.textContent = 'Endpoint /debug-sessions не найден (это нормально)';
+                }
+                
+            } catch (error) {
+                resultDiv.textContent = 'Ошибка: ' + error.message;
+            }
+        }
+
+        // Запуск при загрузке
+        init();
+    </script>
+</body>
+</html>
