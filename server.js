@@ -627,6 +627,106 @@ app.get("/get-user-referrals", async (req, res) => {
   }
 });
 
+// Endpoint для получения информации о том, кто пригласил пользователя
+app.get("/get-referrer-info", async (req, res) => {
+  try {
+    const email = req.query.email;
+    const browserId = req.query.browser_id;
+    
+    console.log('GET /get-referrer-info запрос:', { email, browserId });
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "Email is required"
+      });
+    }
+    
+    // Получаем данные пользователя
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+    
+    if (userError || !userData) {
+      console.log('❌ Пользователь не найден:', email);
+      return res.json({
+        success: true,
+        user: { email },
+        referrer: null,
+        message: "User not found or no referrer"
+      });
+    }
+    
+    console.log('👤 Пользователь найден:', { email: userData.email, referred_by: userData.referred_by });
+    
+    // Если пользователь не был приглашен никем
+    if (!userData.referred_by) {
+      return res.json({
+        success: true,
+        user: {
+          email: userData.email,
+          name: userData.name,
+          referral_code: userData.referral_code
+        },
+        referrer: null,
+        message: "User was not referred by anyone"
+      });
+    }
+    
+    // Ищем того, кто пригласил пользователя (по referral_code)
+    const { data: referrerData, error: referrerError } = await supabase
+      .from('users')
+      .select('email, name, referral_code, created_at')
+      .eq('referral_code', userData.referred_by)
+      .single();
+    
+    if (referrerError || !referrerData) {
+      console.log('❌ Реферер не найден для кода:', userData.referred_by);
+      return res.json({
+        success: true,
+        user: {
+          email: userData.email,
+          name: userData.name,
+          referral_code: userData.referral_code
+        },
+        referrer: null,
+        message: "Referrer not found"
+      });
+    }
+    
+    console.log('🎯 Реферер найден:', { email: referrerData.email, name: referrerData.name });
+    
+    const result = {
+      success: true,
+      user: {
+        email: userData.email,
+        name: userData.name,
+        referral_code: userData.referral_code,
+        referred_by: userData.referred_by
+      },
+      referrer: {
+        email: referrerData.email,
+        name: referrerData.name,
+        referral_code: referrerData.referral_code,
+        created_at: referrerData.created_at
+      },
+      message: "Referrer information retrieved successfully"
+    };
+    
+    res.json(result);
+    
+  } catch (err) {
+    console.error('❌ Ошибка в /get-referrer-info:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message,
+      details: "Failed to get referrer information"
+    });
+  }
+});
+
 // DEBUG endpoint для проверки сессий
 app.get("/debug-sessions", (req, res) => {
   try {

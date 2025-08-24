@@ -24,6 +24,12 @@
         '.referral-1-names': 'referrals_level_1.names',         
         '.referral-1-all': 'referrals_level_1.all_names',       
         
+        // Информация о том, кто меня пригласил:
+        '.referrer-name': 'referrer.name',                      
+        '.referrer-email': 'referrer.email',                    
+        '.referrer-code': 'referrer.referral_code',             
+        '.referred-by-code': 'referred_by',                     
+        
         // Реферальная ссылка:
         '.my-ref-link': 'referral_link'       
     };
@@ -32,6 +38,7 @@
 
     let currentUserData = null;
     let currentReferralsData = null;
+    let currentReferrerData = null;
     let browserId = null;
 
     // Функция для генерации уникального ID браузера
@@ -132,6 +139,17 @@
                 return field === 'count' ? 0 : 'Нет рефералов';
             }
 
+            // Специальная обработка для информации о рефере
+            if (path.startsWith('referrer.')) {
+                const field = path.split('.')[1];
+                
+                if (currentReferrerData && currentReferrerData.referrer) {
+                    return currentReferrerData.referrer[field];
+                }
+                
+                return 'Нет реферера';
+            }
+
             // Обычная обработка вложенных значений
             return path.split('.').reduce((current, key) => {
                 if (current === null || current === undefined) return undefined;
@@ -181,6 +199,39 @@
             return data;
         } catch (error) {
             console.error('❌ Ошибка при получении рефералов:', error);
+            return null;
+        }
+    }
+
+    // Функция для получения информации о том, кто пригласил пользователя
+    async function getReferrerInfo(email) {
+        try {
+            console.log('🔍 Запрашиваем информацию о рефере для:', email);
+            
+            const response = await fetch(`${SERVER_URL}/get-referrer-info?email=${encodeURIComponent(email)}&browser_id=${browserId}`, {
+                method: 'GET',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('✅ Информация о рефере получена:', data);
+            
+            if (data.success) {
+                currentReferrerData = data;
+                console.log('💾 Данные реферера сохранены');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('❌ Ошибка при получении информации о рефере:', error);
             return null;
         }
     }
@@ -262,6 +313,8 @@
                 // Получаем рефералов с реальными именами
                 if (currentUserData.email) {
                     await getUserReferrals(currentUserData.email);
+                    // Получаем информацию о том, кто пригласил пользователя
+                    await getReferrerInfo(currentUserData.email);
                 }
             }
             
