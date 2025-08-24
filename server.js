@@ -627,6 +627,167 @@ app.get("/get-user-referrals", async (req, res) => {
   }
 });
 
+// Endpoint для отслеживания реферальных переходов
+app.post("/track-referral", async (req, res) => {
+  try {
+    console.log('POST /track-referral запрос:', req.body);
+    
+    const { action, referral_code, source_url, landing_page, browser_id, user_agent, utm_source, utm_medium, utm_campaign } = req.body;
+    
+    // Сохраняем информацию о реферальном переходе
+    if (!global.referralTracking) {
+      global.referralTracking = [];
+    }
+    
+    const trackingData = {
+      action,
+      referral_code,
+      source_url,
+      landing_page,
+      browser_id,
+      user_agent,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      timestamp: new Date().toISOString(),
+      session_id: req.sessionID
+    };
+    
+    global.referralTracking.push(trackingData);
+    
+    console.log('🔗 Реферальный переход зафиксирован:', trackingData);
+    
+    res.json({
+      success: true,
+      message: "Referral tracking recorded",
+      data: trackingData
+    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка в /track-referral:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Endpoint для обработки покупок с реферальной информацией
+app.post("/purchase-with-referral", async (req, res) => {
+  try {
+    console.log('POST /purchase-with-referral запрос:', req.body);
+    
+    const { action, form_data, referral_info, page_url, browser_id } = req.body;
+    
+    // Сохраняем информацию о покупке с рефералом
+    if (!global.purchasesWithReferrals) {
+      global.purchasesWithReferrals = [];
+    }
+    
+    const purchaseData = {
+      action,
+      form_data,
+      referral_info,
+      page_url,
+      browser_id,
+      timestamp: new Date().toISOString(),
+      session_id: req.sessionID
+    };
+    
+    global.purchasesWithReferrals.push(purchaseData);
+    
+    console.log('💳 Покупка с рефералом зафиксирована:', {
+      referral_code: referral_info?.referral_code,
+      browser_id: browser_id,
+      form_fields: Object.keys(form_data || {})
+    });
+    
+    // Здесь можно добавить отправку на внешний вебхук
+    if (referral_info?.referral_code) {
+      await sendToExternalWebhook(purchaseData);
+    }
+    
+    res.json({
+      success: true,
+      message: "Purchase with referral recorded",
+      data: {
+        referral_code: referral_info?.referral_code,
+        timestamp: purchaseData.timestamp
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка в /purchase-with-referral:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Функция для отправки на внешний вебхук
+async function sendToExternalWebhook(purchaseData) {
+  try {
+    // Здесь укажите URL вашего внешнего вебхука
+    const EXTERNAL_WEBHOOK_URL = process.env.EXTERNAL_WEBHOOK_URL || 'https://your-webhook-url.com/webhook';
+    
+    const webhookPayload = {
+      event: 'purchase_with_referral',
+      referral_code: purchaseData.referral_info?.referral_code,
+      browser_id: purchaseData.browser_id,
+      form_data: purchaseData.form_data,
+      referral_source: purchaseData.referral_info?.source_url,
+      landing_page: purchaseData.referral_info?.landing_page,
+      purchase_timestamp: purchaseData.timestamp,
+      referral_timestamp: purchaseData.referral_info?.timestamp
+    };
+    
+    console.log('🌐 Отправляем на внешний вебхук:', EXTERNAL_WEBHOOK_URL);
+    console.log('📦 Данные для вебхука:', webhookPayload);
+    
+    const response = await fetch(EXTERNAL_WEBHOOK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Tilda-Referral-Tracker/1.0'
+      },
+      body: JSON.stringify(webhookPayload)
+    });
+    
+    if (response.ok) {
+      console.log('✅ Данные успешно отправлены на внешний вебхук');
+    } else {
+      console.warn('⚠️ Ошибка отправки на внешний вебхук:', response.status, response.statusText);
+    }
+    
+  } catch (error) {
+    console.error('❌ Ошибка отправки на внешний вебхук:', error);
+  }
+}
+
+// Endpoint для получения статистики реферальных переходов
+app.get("/referral-stats", (req, res) => {
+  try {
+    const stats = {
+      total_referral_visits: global.referralTracking ? global.referralTracking.length : 0,
+      total_purchases_with_referrals: global.purchasesWithReferrals ? global.purchasesWithReferrals.length : 0,
+      recent_referral_visits: global.referralTracking ? global.referralTracking.slice(-10) : [],
+      recent_purchases: global.purchasesWithReferrals ? global.purchasesWithReferrals.slice(-10) : []
+    };
+    
+    res.json({
+      success: true,
+      stats: stats
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // DEBUG endpoint для проверки сессий
 app.get("/debug-sessions", (req, res) => {
   try {

@@ -1,0 +1,176 @@
+<!-- 
+РУЧНОЕ ДОБАВЛЕНИЕ РЕФЕРАЛЬНОЙ ИНФОРМАЦИИ К ФОРМАМ
+Используйте этот скрипт, если нужно вручную добавить реферальную информацию к конкретной форме
+-->
+
+<script>
+(function() {
+    'use strict';
+    
+    console.log('🔧 Загружен скрипт ручного добавления реферальной информации к формам');
+    
+    // Функция для получения реферальной информации
+    function getReferralInfo() {
+        const savedReferral = localStorage.getItem('tilda_referral_info');
+        const referralCode = localStorage.getItem('tilda_referral_code');
+        
+        if (savedReferral) {
+            return JSON.parse(savedReferral);
+        } else if (referralCode) {
+            return {
+                referral_code: referralCode,
+                timestamp: localStorage.getItem('tilda_referral_timestamp'),
+                browser_id: localStorage.getItem('tilda_browser_id')
+            };
+        }
+        
+        return null;
+    }
+    
+    // Функция для добавления реферальных полей к форме
+    function addReferralFieldsToForm(form, referralInfo) {
+        if (!form || !referralInfo) {
+            console.warn('⚠️ Форма или реферальная информация не найдены');
+            return false;
+        }
+        
+        // Удаляем существующие реферальные поля
+        const existingFields = form.querySelectorAll('input[name^="referral_"]');
+        existingFields.forEach(field => field.remove());
+        
+        // Добавляем новые скрытые поля
+        const fieldsToAdd = {
+            'referral_code': referralInfo.referral_code,
+            'referral_browser_id': referralInfo.browser_id,
+            'referral_timestamp': referralInfo.timestamp,
+            'referral_source_url': referralInfo.source_url || '',
+            'referral_landing_page': referralInfo.landing_page || ''
+        };
+        
+        let addedFields = 0;
+        
+        Object.keys(fieldsToAdd).forEach(fieldName => {
+            if (fieldsToAdd[fieldName]) {
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = fieldName;
+                hiddenField.value = fieldsToAdd[fieldName];
+                form.appendChild(hiddenField);
+                
+                console.log(`➕ Добавлено поле: ${fieldName} = ${fieldsToAdd[fieldName]}`);
+                addedFields++;
+            }
+        });
+        
+        console.log(`✅ Добавлено ${addedFields} реферальных полей к форме`);
+        return true;
+    }
+    
+    // Функция для поиска и обработки всех форм на странице
+    function processAllForms() {
+        const referralInfo = getReferralInfo();
+        
+        if (!referralInfo) {
+            console.log('ℹ️ Реферальная информация не найдена');
+            return;
+        }
+        
+        console.log('🔍 Ищем формы для добавления реферальной информации...');
+        console.log('📋 Реферальная информация:', referralInfo);
+        
+        const forms = document.querySelectorAll('form');
+        let processedForms = 0;
+        
+        forms.forEach((form, index) => {
+            // Проверяем, является ли форма формой покупки/заказа
+            const hasPaymentFields = form.querySelector('input[name*="price"], input[name*="amount"], input[name*="sum"], input[name*="payment"], input[name*="order"], button[type="submit"]');
+            
+            if (hasPaymentFields) {
+                console.log(`💳 Обрабатываем форму ${index + 1}:`, form);
+                
+                if (addReferralFieldsToForm(form, referralInfo)) {
+                    processedForms++;
+                }
+            }
+        });
+        
+        console.log(`✅ Обработано ${processedForms} форм из ${forms.length} найденных`);
+    }
+    
+    // Глобальные функции для ручного использования
+    window.TildaReferralHelper = {
+        // Получить реферальную информацию
+        getReferralInfo: getReferralInfo,
+        
+        // Добавить реферальную информацию к конкретной форме
+        addToForm: function(formSelector) {
+            const form = typeof formSelector === 'string' ? document.querySelector(formSelector) : formSelector;
+            const referralInfo = getReferralInfo();
+            
+            if (form && referralInfo) {
+                return addReferralFieldsToForm(form, referralInfo);
+            } else {
+                console.warn('⚠️ Форма не найдена или нет реферальной информации');
+                return false;
+            }
+        },
+        
+        // Обработать все формы на странице
+        processAllForms: processAllForms,
+        
+        // Показать текущую реферальную информацию
+        showReferralInfo: function() {
+            const referralInfo = getReferralInfo();
+            if (referralInfo) {
+                console.log('📋 Текущая реферальная информация:', referralInfo);
+                alert('Реферальный код: ' + referralInfo.referral_code + '\nВремя: ' + referralInfo.timestamp);
+            } else {
+                console.log('ℹ️ Реферальная информация не найдена');
+                alert('Реферальная информация не найдена');
+            }
+        },
+        
+        // Установить реферальный код вручную
+        setReferralCode: function(code) {
+            const referralInfo = {
+                referral_code: code,
+                timestamp: new Date().toISOString(),
+                browser_id: localStorage.getItem('tilda_browser_id') || 'manual_' + Date.now(),
+                source_url: window.location.href,
+                landing_page: window.location.pathname
+            };
+            
+            localStorage.setItem('tilda_referral_info', JSON.stringify(referralInfo));
+            localStorage.setItem('tilda_referral_code', code);
+            localStorage.setItem('tilda_referral_timestamp', referralInfo.timestamp);
+            
+            console.log('✅ Реферальный код установлен вручную:', referralInfo);
+            return referralInfo;
+        }
+    };
+    
+    // Автоматическая обработка при загрузке страницы
+    function init() {
+        // Небольшая задержка для загрузки всех форм
+        setTimeout(() => {
+            processAllForms();
+        }, 1000);
+        
+        // Также обрабатываем формы, которые могут появиться позже
+        setTimeout(() => {
+            processAllForms();
+        }, 3000);
+    }
+    
+    // Запуск при загрузке страницы
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    console.log('📋 Скрипт ручного добавления реферальной информации готов к работе');
+    console.log('💡 Используйте: TildaReferralHelper.showReferralInfo() для просмотра данных');
+    console.log('💡 Используйте: TildaReferralHelper.addToForm("form") для добавления к конкретной форме');
+})();
+</script>

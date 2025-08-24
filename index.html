@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Тест Browser ID System - AIDA.KG</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .test-section { 
+            background: white; 
+            padding: 20px; 
+            margin: 15px 0; 
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            border-left: 4px solid #007bff;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .browser-id {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+        .success {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        input[type="email"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+            margin-right: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info-box {
+            background: #e2e3e5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Тест Browser ID System</h1>
+        <p>Система уникальной идентификации браузеров для AIDA.KG</p>
+        <div>Статус сервера: <span id="serverStatus" class="status offline">Проверяется...</span></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🆔 Ваш Browser ID:</h3>
+        <div id="browserIdDisplay" class="browser-id">Загружается...</div>
+        <div class="info-box">
+            <strong>Что это:</strong> Уникальный идентификатор вашего браузера. Каждый браузер (Chrome, Firefox, Safari) получает свой ID.
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>1. 🔐 Авторизация пользователя</h3>
+        <div>
+            <input type="email" id="testEmail" placeholder="Введите email" value="numisushi@gmail.com">
+            <button onclick="testAuth()" id="authBtn">🔐 Авторизоваться</button>
+        </div>
+        <div id="authResult" class="result" style="display: none;"></div>
+        <div class="info-box">
+            <strong>Что происходит:</strong> Отправляем данные авторизации на сервер с вашим Browser ID.
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. 👤 Получение данных пользователя</h3>
+        <button onclick="testUserData()" id="userBtn">👤 Получить данные</button>
+        <div id="userResult" class="result" style="display: none;"></div>
+        <div class="info-box">
+            <strong>Что происходит:</strong> Сервер ищет данные пользователя по вашему Browser ID.
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. 🔍 Проверка Browser Sessions</h3>
+        <button onclick="testBrowserSessions()" id="sessionsBtn">🔍 Проверить сессии</button>
+        <div id="sessionsResult" class="result" style="display: none;"></div>
+        <div class="info-box">
+            <strong>Что происходит:</strong> Показывает все активные сессии и связь Browser ID → Email.
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>4. 🧹 Очистка данных</h3>
+        <button onclick="clearData()" style="background: #dc3545;">🗑️ Очистить localStorage</button>
+        <button onclick="generateNewId()" style="background: #ffc107; color: #000;">🔄 Новый Browser ID</button>
+        <div class="info-box">
+            <strong>Для тестирования:</strong> Очистите данные и создайте новый ID для имитации другого браузера.
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+        let browserId = null;
+
+        // Функция для генерации уникального ID браузера
+        function getBrowserId() {
+            let id = localStorage.getItem('tilda_browser_id');
+            if (!id) {
+                id = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('tilda_browser_id', id);
+                console.log('🆔 Создан новый Browser ID:', id);
+            } else {
+                console.log('🆔 Используется существующий Browser ID:', id);
+            }
+            return id;
+        }
+
+        // Проверка статуса сервера
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${SERVER_URL}/debug-sessions`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (response.ok) {
+                    document.getElementById('serverStatus').textContent = 'Онлайн';
+                    document.getElementById('serverStatus').className = 'status online';
+                    return true;
+                } else {
+                    throw new Error('Server responded with error');
+                }
+            } catch (error) {
+                document.getElementById('serverStatus').textContent = 'Офлайн';
+                document.getElementById('serverStatus').className = 'status offline';
+                return false;
+            }
+        }
+
+        // Инициализация
+        async function init() {
+            browserId = getBrowserId();
+            document.getElementById('browserIdDisplay').textContent = browserId;
+            
+            // Проверяем статус сервера
+            await checkServerStatus();
+            
+            // Показываем сохраненный email
+            const storedEmail = localStorage.getItem('tilda_auth_user');
+            if (storedEmail) {
+                document.getElementById('testEmail').value = storedEmail;
+            }
+        }
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            
+            if (typeof data === 'object') {
+                element.textContent = JSON.stringify(data, null, 2);
+            } else {
+                element.textContent = data;
+            }
+        }
+
+        async function testAuth() {
+            const email = document.getElementById('testEmail').value;
+            const btn = document.getElementById('authBtn');
+            
+            if (!email) {
+                showResult('authResult', 'Введите email!', true);
+                return;
+            }
+            
+            try {
+                btn.disabled = true;
+                btn.textContent = '⏳ Авторизация...';
+                showResult('authResult', 'Отправляем запрос авторизации...');
+                
+                const response = await fetch(`${SERVER_URL}/auth-sync`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        action: 'login',
+                        timestamp: new Date().toISOString(),
+                        source: 'test',
+                        page: window.location.href,
+                        browser_id: browserId
+                    })
+                });
+                
+                const data = await response.json();
+                showResult('authResult', data);
+                
+                // Сохраняем в localStorage
+                localStorage.setItem('tilda_auth_user', email);
+                
+            } catch (error) {
+                showResult('authResult', `Ошибка: ${error.message}`, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔐 Авторизоваться';
+            }
+        }
+
+        async function testUserData() {
+            const btn = document.getElementById('userBtn');
+            
+            try {
+                btn.disabled = true;
+                btn.textContent = '⏳ Загрузка...';
+                showResult('userResult', 'Получаем данные пользователя...');
+                
+                const storedEmail = localStorage.getItem('tilda_auth_user');
+                let url = `${SERVER_URL}/user-full-data?browser_id=${browserId}`;
+                if (storedEmail) {
+                    url += `&email=${encodeURIComponent(storedEmail)}`;
+                }
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                showResult('userResult', data);
+                
+            } catch (error) {
+                showResult('userResult', `Ошибка: ${error.message}`, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '👤 Получить данные';
+            }
+        }
+
+        async function testBrowserSessions() {
+            const btn = document.getElementById('sessionsBtn');
+            
+            try {
+                btn.disabled = true;
+                btn.textContent = '⏳ Проверка...';
+                showResult('sessionsResult', 'Проверяем Browser Sessions...');
+                
+                const response = await fetch(`${SERVER_URL}/debug-sessions?browser_id=${browserId}`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                showResult('sessionsResult', data);
+                
+            } catch (error) {
+                showResult('sessionsResult', `Ошибка: ${error.message}`, true);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Проверить сессии';
+            }
+        }
+
+        function clearData() {
+            localStorage.removeItem('tilda_auth_user');
+            localStorage.removeItem('tilda_auth_timestamp');
+            alert('✅ Данные авторизации очищены!');
+        }
+
+        function generateNewId() {
+            localStorage.removeItem('tilda_browser_id');
+            browserId = getBrowserId();
+            document.getElementById('browserIdDisplay').textContent = browserId;
+            alert('✅ Создан новый Browser ID: ' + browserId);
+        }
+
+        // Запуск при загрузке
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!-- 
+ОТСЛЕЖИВАНИЕ РЕФЕРАЛЬНЫХ ССЫЛОК
+Сохраняет реферальный код из URL и передает его при покупке
+-->
+
+<script>
+(function() {
+    'use strict';
+    
+    const SERVER_URL = 'https://tilda-supabase-server-nodejs-20.up.railway.app';
+    
+    console.log('🔗 Инициализация отслеживания реферальных ссылок...');
+    
+    // Функция для генерации уникального ID браузера
+    function getBrowserId() {
+        let id = localStorage.getItem('tilda_browser_id');
+        if (!id) {
+            id = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('tilda_browser_id', id);
+            console.log('🆔 Создан новый Browser ID:', id);
+        }
+        return id;
+    }
+    
+    // Функция для извлечения параметров из URL
+    function getUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const params = {};
+        
+        for (const [key, value] of urlParams.entries()) {
+            params[key] = value;
+        }
+        
+        return params;
+    }
+    
+    // Функция для сохранения реферальной информации
+    function saveReferralInfo() {
+        const params = getUrlParams();
+        const browserId = getBrowserId();
+        
+        // Ищем реферальный код в различных параметрах
+        const referralCode = params.ref || params.referral || params.r || params.refcode;
+        
+        if (referralCode) {
+            const referralInfo = {
+                referral_code: referralCode,
+                source_url: window.location.href,
+                landing_page: window.location.pathname,
+                timestamp: new Date().toISOString(),
+                browser_id: browserId,
+                user_agent: navigator.userAgent,
+                utm_source: params.utm_source || null,
+                utm_medium: params.utm_medium || null,
+                utm_campaign: params.utm_campaign || null
+            };
+            
+            // Сохраняем в localStorage
+            localStorage.setItem('tilda_referral_info', JSON.stringify(referralInfo));
+            localStorage.setItem('tilda_referral_code', referralCode);
+            localStorage.setItem('tilda_referral_timestamp', new Date().toISOString());
+            
+            console.log('🎯 Реферальная информация сохранена:', referralInfo);
+            
+            // Отправляем на сервер для логирования
+            sendReferralTracking(referralInfo);
+        } else {
+            console.log('ℹ️ Реферальный код в URL не найден');
+            
+            // Проверяем, есть ли сохраненная реферальная информация
+            const savedReferral = localStorage.getItem('tilda_referral_info');
+            if (savedReferral) {
+                console.log('📋 Используется сохраненная реферальная информация:', JSON.parse(savedReferral));
+            }
+        }
+    }
+    
+    // Функция для отправки информации о переходе по реферальной ссылке
+    async function sendReferralTracking(referralInfo) {
+        try {
+            const response = await fetch(`${SERVER_URL}/track-referral`, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'referral_visit',
+                    ...referralInfo
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Реферальное отслеживание отправлено:', data);
+            }
+        } catch (error) {
+            console.warn('⚠️ Ошибка отправки реферального отслеживания:', error);
+        }
+    }
+    
+    // Функция для получения реферальной информации для покупки
+    function getReferralInfoForPurchase() {
+        const savedReferral = localStorage.getItem('tilda_referral_info');
+        const referralCode = localStorage.getItem('tilda_referral_code');
+        
+        if (savedReferral) {
+            return JSON.parse(savedReferral);
+        } else if (referralCode) {
+            return {
+                referral_code: referralCode,
+                timestamp: localStorage.getItem('tilda_referral_timestamp'),
+                browser_id: getBrowserId()
+            };
+        }
+        
+        return null;
+    }
+    
+    // Функция для перехвата форм покупки
+    function interceptPurchaseForms() {
+        console.log('💳 Настраиваем перехват форм покупки...');
+        
+        // Находим все формы на странице
+        const forms = document.querySelectorAll('form');
+        
+        forms.forEach((form, index) => {
+            // Ищем формы, которые могут быть формами покупки
+            const hasPaymentFields = form.querySelector('input[name*="price"], input[name*="amount"], input[name*="sum"], input[name*="payment"], button[type="submit"]');
+            
+            if (hasPaymentFields) {
+                console.log(`💳 Найдена потенциальная форма покупки ${index + 1}:`, form);
+                
+                form.addEventListener('submit', function(event) {
+                    console.log('💳 Перехвачена отправка формы покупки:', form);
+                    
+                    // Получаем реферальную информацию
+                    const referralInfo = getReferralInfoForPurchase();
+                    
+                    if (referralInfo) {
+                        console.log('🎯 Добавляем реферальную информацию к покупке:', referralInfo);
+                        
+                        // Добавляем скрытые поля с реферальной информацией
+                        addHiddenFieldsToForm(form, referralInfo);
+                        
+                        // Отправляем информацию о покупке с рефералом
+                        sendPurchaseWithReferral(form, referralInfo);
+                    } else {
+                        console.log('ℹ️ Реферальная информация не найдена для этой покупки');
+                    }
+                });
+            }
+        });
+        
+        // Также отслеживаем динамически добавленные формы
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const newForms = node.tagName === 'FORM' ? [node] : (node.querySelectorAll ? node.querySelectorAll('form') : []);
+                        
+                        newForms.forEach(function(newForm) {
+                            const hasPaymentFields = newForm.querySelector('input[name*="price"], input[name*="amount"], input[name*="sum"], input[name*="payment"], button[type="submit"]');
+                            
+                            if (hasPaymentFields) {
+                                console.log('💳 Найдена динамическая форма покупки:', newForm);
+                                
+                                newForm.addEventListener('submit', function(event) {
+                                    const referralInfo = getReferralInfoForPurchase();
+                                    
+                                    if (referralInfo) {
+                                        console.log('🎯 Добавляем реферальную информацию к динамической покупке:', referralInfo);
+                                        addHiddenFieldsToForm(newForm, referralInfo);
+                                        sendPurchaseWithReferral(newForm, referralInfo);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    // Функция для добавления скрытых полей в форму
+    function addHiddenFieldsToForm(form, referralInfo) {
+        // Удаляем существующие реферальные поля, если есть
+        const existingFields = form.querySelectorAll('input[name^="referral_"]');
+        existingFields.forEach(field => field.remove());
+        
+        // Добавляем новые скрытые поля
+        const fieldsToAdd = {
+            'referral_code': referralInfo.referral_code,
+            'referral_browser_id': referralInfo.browser_id,
+            'referral_timestamp': referralInfo.timestamp,
+            'referral_source_url': referralInfo.source_url || '',
+            'referral_landing_page': referralInfo.landing_page || ''
+        };
+        
+        Object.keys(fieldsToAdd).forEach(fieldName => {
+            if (fieldsToAdd[fieldName]) {
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = fieldName;
+                hiddenField.value = fieldsToAdd[fieldName];
+                form.appendChild(hiddenField);
+                
+                console.log(`➕ Добавлено скрытое поле: ${fieldName} = ${fieldsToAdd[fieldName]}`);
+            }
+        });
+    }
+    
+    // Функция для отправки информации о покупке с рефералом
+    async function sendPurchaseWithReferral(form, referralInfo) {
+        try {
+            // Собираем данные формы
+            const formData = new FormData(form);
+            const formObject = {};
+            
+            for (const [key, value] of formData.entries()) {
+                formObject[key] = value;
+            }
+            
+            const purchaseData = {
+                action: 'purchase_with_referral',
+                form_data: formObject,
+                referral_info: referralInfo,
+                page_url: window.location.href,
+                timestamp: new Date().toISOString(),
+                browser_id: getBrowserId()
+            };
+            
+            console.log('💳 Отправляем данные покупки с рефералом:', purchaseData);
+            
+            const response = await fetch(`${SERVER_URL}/purchase-with-referral`, {
+                method: 'POST',
+                mode: 'cors',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(purchaseData)
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Данные покупки с рефералом отправлены:', data);
+            }
+        } catch (error) {
+            console.warn('⚠️ Ошибка отправки данных покупки с рефералом:', error);
+        }
+    }
+    
+    // Функция для очистки устаревшей реферальной информации
+    function cleanupOldReferralInfo() {
+        const referralTimestamp = localStorage.getItem('tilda_referral_timestamp');
+        
+        if (referralTimestamp) {
+            const referralTime = new Date(referralTimestamp);
+            const now = new Date();
+            const daysDiff = (now - referralTime) / (1000 * 60 * 60 * 24);
+            
+            // Очищаем реферальную информацию старше 30 дней
+            if (daysDiff > 30) {
+                localStorage.removeItem('tilda_referral_info');
+                localStorage.removeItem('tilda_referral_code');
+                localStorage.removeItem('tilda_referral_timestamp');
+                console.log('🧹 Очищена устаревшая реферальная информация');
+            }
+        }
+    }
+    
+    // Главная функция инициализации
+    function init() {
+        console.log('🚀 Запуск системы отслеживания рефералов...');
+        
+        // Очищаем устаревшую информацию
+        cleanupOldReferralInfo();
+        
+        // Сохраняем реферальную информацию из URL
+        saveReferralInfo();
+        
+        // Настраиваем перехват форм покупки
+        interceptPurchaseForms();
+        
+        console.log('✅ Система отслеживания рефералов активна');
+    }
+    
+    // Экспортируем функции для внешнего использования
+    window.TildaReferralTracker = {
+        getReferralInfo: getReferralInfoForPurchase,
+        addReferralToForm: function(form) {
+            const referralInfo = getReferralInfoForPurchase();
+            if (referralInfo) {
+                addHiddenFieldsToForm(form, referralInfo);
+            }
+            return referralInfo;
+        }
+    };
+    
+    // Запуск при загрузке страницы
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    
+    console.log('📋 Система отслеживания реферальных ссылок загружена');
+})();
+</script>
