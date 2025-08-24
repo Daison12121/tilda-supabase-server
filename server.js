@@ -727,6 +727,46 @@ app.get("/get-referrer-info", async (req, res) => {
   }
 });
 
+// Временный endpoint для поиска пользователя по реферальному коду
+app.get("/find-user-by-ref-code", async (req, res) => {
+  try {
+    const refCode = req.query.ref_code;
+    
+    if (!refCode) {
+      return res.status(400).json({
+        success: false,
+        error: "ref_code is required"
+      });
+    }
+    
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('email, name, referral_code, created_at')
+      .eq('referral_code', refCode)
+      .single();
+    
+    if (error || !userData) {
+      return res.json({
+        success: false,
+        message: "User not found",
+        ref_code: refCode
+      });
+    }
+    
+    res.json({
+      success: true,
+      user: userData,
+      message: "User found"
+    });
+    
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
 // DEBUG endpoint для проверки сессий
 app.get("/debug-sessions", (req, res) => {
   try {
